@@ -1,1 +1,4 @@
 project_id = "heecfobudpwwvlqczymk"
+
+[functions.lash-tryon]
+verify_jwt = false

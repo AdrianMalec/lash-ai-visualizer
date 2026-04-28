@@ -1,10 +1,11 @@
-import { useState } from "react";
-import arScan from "@/assets/ar-scan.jpg";
+import { useRef, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import lashClassic from "@/assets/lash-classic.jpg";
 import lashVolume from "@/assets/lash-volume.jpg";
 import lashCateye from "@/assets/lash-cateye.jpg";
 import lashFox from "@/assets/lash-fox.jpg";
-import { Camera, Upload, Check, Sparkles } from "lucide-react";
+import { Upload, Check, Sparkles, Loader2, RefreshCw, ImagePlus } from "lucide-react";
+import { toast } from "sonner";
 
 const styles = [
   { id: "classic", name: "Classic", img: lashClassic },
@@ -13,8 +14,61 @@ const styles = [
   { id: "fox", name: "Fox Eye", img: lashFox },
 ];
 
+const fileToDataUrl = (file: File): Promise<string> =>
+  new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result as string);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+
 export const Scanner = () => {
   const [active, setActive] = useState(styles[1]);
+  const [sourceImage, setSourceImage] = useState<string | null>(null);
+  const [resultImage, setResultImage] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const onUpload = async (file: File) => {
+    if (file.size > 8 * 1024 * 1024) {
+      toast.error("Maksymalny rozmiar zdjęcia to 8 MB");
+      return;
+    }
+    const dataUrl = await fileToDataUrl(file);
+    setSourceImage(dataUrl);
+    setResultImage(null);
+  };
+
+  const generate = async () => {
+    if (!sourceImage) {
+      toast.error("Najpierw wgraj swoje zdjęcie");
+      return;
+    }
+    setLoading(true);
+    setResultImage(null);
+    try {
+      const { data, error } = await supabase.functions.invoke("lash-tryon", {
+        body: { imageUrl: sourceImage, style: active.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      if (!data?.image) throw new Error("Brak obrazu w odpowiedzi");
+      setResultImage(data.image);
+      toast.success(`Stylizacja ${active.name} gotowa`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Coś poszło nie tak";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const reset = () => {
+    setSourceImage(null);
+    setResultImage(null);
+  };
+
+  const displayed = resultImage ?? sourceImage;
 
   return (
     <section id="scanner" className="relative py-32 overflow-hidden">
@@ -25,25 +79,53 @@ export const Scanner = () => {
             Zobacz <span className="text-gold italic">siebie</span> w nowych rzęsach
           </h2>
           <p className="text-muted-foreground max-w-xl mx-auto font-light">
-            Nasza AI mapuje 468 punktów twarzy w czasie rzeczywistym i nakłada wybraną stylizację
-            — także z Twoich inspiracji z Pinterest.
+            Wgraj swoje zdjęcie, wybierz stylizację — AI nałoży ją fotorealistycznie na Twoje oczy
+            w kilka sekund.
           </p>
         </div>
 
         <div className="grid lg:grid-cols-[1.1fr,1fr] gap-12 items-center">
-          {/* AR camera mockup */}
+          {/* Preview frame */}
           <div className="relative">
             <div className="relative aspect-[3/4] max-w-md mx-auto bg-card border border-border overflow-hidden shadow-deep">
-              <img
-                src={arScan}
-                alt="Skan twarzy AR z nakładką stylizacji rzęs"
-                className="w-full h-full object-cover"
-                loading="lazy"
-                width={1080}
-                height={1440}
-              />
-              {/* Scan line */}
-              <div className="absolute inset-x-0 h-24 bg-gradient-to-b from-transparent via-primary/30 to-transparent animate-scan pointer-events-none" />
+              {!displayed && (
+                <button
+                  onClick={() => inputRef.current?.click()}
+                  className="absolute inset-0 flex flex-col items-center justify-center gap-4 hover:bg-primary/5 transition-luxe group"
+                >
+                  <div className="w-20 h-20 rounded-full border border-primary/40 flex items-center justify-center group-hover:border-primary group-hover:shadow-glow transition-luxe">
+                    <ImagePlus size={28} className="text-primary" />
+                  </div>
+                  <div className="text-center px-8">
+                    <div className="font-display text-2xl mb-2">Wgraj swoje zdjęcie</div>
+                    <div className="text-xs tracking-[0.2em] text-muted-foreground uppercase">
+                      Najlepiej selfie en face
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              {displayed && (
+                <>
+                  <img
+                    src={displayed}
+                    alt="Twoje zdjęcie z nałożoną stylizacją rzęs"
+                    className="w-full h-full object-cover"
+                  />
+                  {loading && (
+                    <>
+                      <div className="absolute inset-0 bg-background/40 backdrop-blur-sm" />
+                      <div className="absolute inset-x-0 h-24 bg-gradient-to-b from-transparent via-primary/40 to-transparent animate-scan pointer-events-none" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
+                        <Loader2 className="text-primary animate-spin" size={32} />
+                        <span className="text-[10px] tracking-[0.3em] text-primary uppercase">
+                          AI generuje try-on...
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
 
               {/* Corner brackets */}
               {[
@@ -52,24 +134,47 @@ export const Scanner = () => {
                 "bottom-4 left-4 border-l border-b",
                 "bottom-4 right-4 border-r border-b",
               ].map((c) => (
-                <div key={c} className={`absolute ${c} border-primary w-8 h-8`} />
+                <div key={c} className={`absolute ${c} border-primary w-8 h-8 pointer-events-none`} />
               ))}
 
-              {/* Top status */}
-              <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 bg-background/70 backdrop-blur-md border border-primary/30">
-                <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
-                <span className="text-[10px] tracking-[0.3em] text-primary uppercase">Live AI Scan</span>
-              </div>
-
-              {/* Bottom info */}
-              <div className="absolute bottom-6 inset-x-6 p-4 bg-background/80 backdrop-blur-xl border border-border">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-[10px] tracking-[0.3em] text-muted-foreground uppercase">Aktualnie</span>
-                  <span className="text-[10px] text-primary">98% match</span>
+              {displayed && (
+                <div className="absolute top-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2 bg-background/70 backdrop-blur-md border border-primary/30">
+                  <span className="w-1.5 h-1.5 bg-primary rounded-full animate-pulse" />
+                  <span className="text-[10px] tracking-[0.3em] text-primary uppercase">
+                    {resultImage ? "AI Result" : "Original"}
+                  </span>
                 </div>
-                <div className="font-display text-2xl">{active.name}</div>
-              </div>
+              )}
+
+              {resultImage && (
+                <div className="absolute bottom-6 inset-x-6 p-4 bg-background/85 backdrop-blur-xl border border-border">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[10px] tracking-[0.3em] text-muted-foreground uppercase">
+                      Stylizacja
+                    </span>
+                    <span className="text-[10px] text-primary">AI generated</span>
+                  </div>
+                  <div className="font-display text-2xl">{active.name}</div>
+                </div>
+              )}
             </div>
+
+            {sourceImage && (
+              <button
+                onClick={reset}
+                className="mt-4 mx-auto flex items-center gap-2 text-[10px] tracking-[0.3em] text-muted-foreground hover:text-primary uppercase transition-luxe"
+              >
+                <RefreshCw size={11} /> Zmień zdjęcie
+              </button>
+            )}
+
+            <input
+              ref={inputRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => e.target.files?.[0] && onUpload(e.target.files[0])}
+            />
           </div>
 
           {/* Controls */}
@@ -77,15 +182,20 @@ export const Scanner = () => {
             <div>
               <div className="flex items-center gap-3 mb-6">
                 <Sparkles size={14} className="text-primary" />
-                <span className="text-xs tracking-[0.3em] text-muted-foreground uppercase">Wybierz styl</span>
+                <span className="text-xs tracking-[0.3em] text-muted-foreground uppercase">
+                  Wybierz styl
+                </span>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 {styles.map((s) => (
                   <button
                     key={s.id}
                     onClick={() => setActive(s)}
-                    className={`group relative aspect-square overflow-hidden border transition-luxe ${
-                      active.id === s.id ? "border-primary shadow-gold" : "border-border hover:border-primary/50"
+                    disabled={loading}
+                    className={`group relative aspect-square overflow-hidden border transition-luxe disabled:opacity-50 ${
+                      active.id === s.id
+                        ? "border-primary shadow-gold"
+                        : "border-border hover:border-primary/50"
                     }`}
                   >
                     <img src={s.img} alt={s.name} className="w-full h-full object-cover" loading="lazy" />
@@ -104,30 +214,37 @@ export const Scanner = () => {
             </div>
 
             <div className="space-y-3">
-              <button className="w-full px-6 py-4 bg-gradient-gold text-primary-foreground text-xs tracking-[0.25em] uppercase font-medium flex items-center justify-center gap-3 hover:shadow-glow transition-luxe">
-                <Camera size={16} />
-                Włącz kamerę
+              <button
+                onClick={generate}
+                disabled={loading || !sourceImage}
+                className="w-full px-6 py-4 bg-gradient-gold text-primary-foreground text-xs tracking-[0.25em] uppercase font-medium flex items-center justify-center gap-3 hover:shadow-glow transition-luxe disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> Generowanie...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={16} /> Wygeneruj try-on AI
+                  </>
+                )}
               </button>
-              <button className="w-full px-6 py-4 border border-primary/40 text-foreground text-xs tracking-[0.25em] uppercase flex items-center justify-center gap-3 hover:bg-primary/5 transition-luxe">
+              <button
+                onClick={() => inputRef.current?.click()}
+                disabled={loading}
+                className="w-full px-6 py-4 border border-primary/40 text-foreground text-xs tracking-[0.25em] uppercase flex items-center justify-center gap-3 hover:bg-primary/5 transition-luxe disabled:opacity-50"
+              >
                 <Upload size={16} />
-                Wklej z Pinterest
+                {sourceImage ? "Wgraj inne zdjęcie" : "Wgraj swoje zdjęcie"}
               </button>
             </div>
 
             <div className="hairline" />
 
-            <div className="grid grid-cols-3 gap-4 text-center">
-              {[
-                { n: "01", l: "Skan 3D" },
-                { n: "02", l: "Try-on" },
-                { n: "03", l: "Match" },
-              ].map((s) => (
-                <div key={s.n}>
-                  <div className="font-display text-2xl text-gold">{s.n}</div>
-                  <div className="text-[10px] tracking-[0.2em] text-muted-foreground uppercase mt-1">{s.l}</div>
-                </div>
-              ))}
-            </div>
+            <p className="text-xs text-muted-foreground font-light leading-relaxed">
+              ✦ Najlepsze efekty: zdjęcie en face, dobre oświetlenie, oczy szeroko otwarte.
+              Możesz też wkleić inspirację z Pinterest jako zdjęcie referencyjne.
+            </p>
           </div>
         </div>
       </div>
