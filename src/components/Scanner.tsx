@@ -27,6 +27,7 @@ export const Scanner = () => {
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [decision, setDecision] = useState<"pending" | "approved" | "rejected">("pending");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onUpload = async (file: File) => {
@@ -37,24 +38,28 @@ export const Scanner = () => {
     const dataUrl = await fileToDataUrl(file);
     setSourceImage(dataUrl);
     setResultImage(null);
+    setDecision("pending");
   };
 
-  const generate = async () => {
+  const generate = async (styleOverride?: typeof styles[number]) => {
     if (!sourceImage) {
       toast.error("Najpierw wgraj swoje zdjęcie");
       return;
     }
+    const chosen = styleOverride ?? active;
+    if (styleOverride) setActive(styleOverride);
     setLoading(true);
     setResultImage(null);
+    setDecision("pending");
     try {
       const { data, error } = await supabase.functions.invoke("lash-tryon", {
-        body: { imageUrl: sourceImage, style: active.id },
+        body: { imageUrl: sourceImage, style: chosen.id },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (!data?.image) throw new Error("Brak obrazu w odpowiedzi");
       setResultImage(data.image);
-      toast.success(`Stylizacja ${active.name} gotowa`);
+      toast.success(`Stylizacja ${chosen.name} gotowa`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Coś poszło nie tak";
       toast.error(msg);
@@ -63,12 +68,28 @@ export const Scanner = () => {
     }
   };
 
+  const approve = () => {
+    setDecision("approved");
+    window.dispatchEvent(new CustomEvent("lash:approved", { detail: { style: active.id } }));
+    toast.success("Świetnie! Dobieramy salony pod tę stylizację");
+    setTimeout(() => {
+      document.getElementById("salons")?.scrollIntoView({ behavior: "smooth" });
+    }, 200);
+  };
+
+  const reject = () => {
+    setDecision("rejected");
+    setResultImage(null);
+    toast("Spróbuj innej stylizacji poniżej", { icon: "✨" });
+  };
+
   const reset = () => {
     setSourceImage(null);
     setResultImage(null);
+    setDecision("pending");
   };
 
-  const displayed = resultImage ?? sourceImage;
+  const suggestions = styles.filter((s) => s.id !== active.id);
 
   return (
     <section id="scanner" className="relative py-32 overflow-hidden">
