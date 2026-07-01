@@ -4,7 +4,7 @@ import lashClassic from "@/assets/lash-classic.jpg";
 import lashVolume from "@/assets/lash-volume.jpg";
 import lashCateye from "@/assets/lash-cateye.jpg";
 import lashFox from "@/assets/lash-fox.jpg";
-import { Upload, Check, Sparkles, Loader2, RefreshCw, ImagePlus } from "lucide-react";
+import { Upload, Check, Sparkles, Loader2, RefreshCw, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 
 const styles = [
