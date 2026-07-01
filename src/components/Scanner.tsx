@@ -90,6 +90,7 @@ export const Scanner = () => {
   };
 
   const suggestions = styles.filter((s) => s.id !== active.id);
+  const displayed = resultImage ?? sourceImage;
 
   return (
     <section id="scanner" className="relative py-32 overflow-hidden">
