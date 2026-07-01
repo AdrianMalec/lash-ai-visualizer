@@ -5,17 +5,19 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const REALISM = "PHOTOREALISTIC professional beauty photography result. Preserve the person's identity, face shape, skin texture, pores, eye color, iris details, eyebrows, makeup, hair, background and original lighting EXACTLY — do not restyle, do not smooth skin, do not change camera angle. Modify ONLY the upper lash line. Individual fibers must be visible, with natural taper, believable root attachment on the lash line, subtle micro-shadows on the eyelid, and slight variation in length and direction between fibers. Avoid painted-on, stickered, symmetrical, cartoonish, plastic or CGI look. No mascara clumps. Match the color temperature and depth of field of the source photo. Output only the edited photo.";
+
 const STYLE_PROMPTS: Record<string, string> = {
   classic:
-    "Add elegant CLASSIC eyelash extensions to this person's eyes: subtle, natural-looking 9-11mm lashes with C-curl, evenly spaced, soft and feminine. Keep skin texture, eye color, makeup and lighting identical. Only modify the lashes.",
+    "Apply CLASSIC 1:1 eyelash extensions: one 10mm C-curl 0.15 fiber per natural lash, evenly spaced, soft natural density, subtle feminine enhancement. " + REALISM,
   volume:
-    "Add dramatic MEGA VOLUME russian eyelash extensions to this person's eyes: ultra full, thick, fluffy 13-15mm lashes with D-curl, lush and glamorous. Keep skin texture, eye color, makeup and lighting identical. Only modify the lashes.",
+    "Apply MEGA VOLUME Russian eyelash extensions: dense fluffy 5D-8D fans of 0.05 fibers, 13-14mm D-curl, dark black, dramatic wide-open glamorous look, lush but fibers still individually visible. " + REALISM,
   cateye:
-    "Add wispy CAT-EYE eyelash extensions to this person's eyes: elongated outer corners 10-13mm, CC-curl, seductive lifted look. Keep skin texture, eye color, makeup and lighting identical. Only modify the lashes.",
+    "Apply CAT-EYE wispy eyelash extensions: gradient lengths 9mm inner to 13mm outer corner with CC-curl, elongated lifted winged shape, seductive feline effect, visible wispy spikes at the outer third. " + REALISM,
   doll:
-    "Add DOLL-LOOK eyelash extensions to this person's eyes: rounded center-focused 10-12mm lashes with D-curl, opens up the eyes, romantic and sweet. Keep skin texture, eye color, makeup and lighting identical. Only modify the lashes.",
-  fox: "Add FOX-EYE eyelash extensions to this person's eyes: sharp dramatic outer wing 11-14mm with L-curl, editorial high-fashion look. Keep skin texture, eye color, makeup and lighting identical. Only modify the lashes.",
-  wet: "Add WET-LOOK SPIKY anime eyelash extensions to this person's eyes: glossy textured separated 12-14mm spikes with M-curl, trendy korean style. Keep skin texture, eye color, makeup and lighting identical. Only modify the lashes.",
+    "Apply DOLL-LOOK eyelash extensions: rounded center-focused shape, longest 12mm in the middle with D-curl, opens the eye vertically, romantic sweet doll effect. " + REALISM,
+  fox: "Apply FOX-EYE eyelash extensions: sharp horizontal wing, shortest inner corner 8mm growing to dramatic 13-14mm L-curl outer corner, editorial high-fashion elongated eye shape. " + REALISM,
+  wet: "Apply WET-LOOK spiky Kim-K style eyelash extensions: separated glossy 12-14mm M-curl spikes with visible gaps between clusters, trendy Korean anime effect, wet shiny appearance. " + REALISM,
 };
 
 serve(async (req) => {
