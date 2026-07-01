@@ -4,7 +4,7 @@ import lashClassic from "@/assets/lash-classic.jpg";
 import lashVolume from "@/assets/lash-volume.jpg";
 import lashCateye from "@/assets/lash-cateye.jpg";
 import lashFox from "@/assets/lash-fox.jpg";
-import { Upload, Check, Sparkles, Loader2, RefreshCw, ImagePlus } from "lucide-react";
+import { Upload, Check, Sparkles, Loader2, RefreshCw, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 
 const styles = [
@@ -27,6 +27,7 @@ export const Scanner = () => {
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [decision, setDecision] = useState<"pending" | "approved" | "rejected">("pending");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const onUpload = async (file: File) => {
@@ -37,24 +38,28 @@ export const Scanner = () => {
     const dataUrl = await fileToDataUrl(file);
     setSourceImage(dataUrl);
     setResultImage(null);
+    setDecision("pending");
   };
 
-  const generate = async () => {
+  const generate = async (styleOverride?: typeof styles[number]) => {
     if (!sourceImage) {
       toast.error("Najpierw wgraj swoje zdjęcie");
       return;
     }
+    const chosen = styleOverride ?? active;
+    if (styleOverride) setActive(styleOverride);
     setLoading(true);
     setResultImage(null);
+    setDecision("pending");
     try {
       const { data, error } = await supabase.functions.invoke("lash-tryon", {
-        body: { imageUrl: sourceImage, style: active.id },
+        body: { imageUrl: sourceImage, style: chosen.id },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
       if (!data?.image) throw new Error("Brak obrazu w odpowiedzi");
       setResultImage(data.image);
-      toast.success(`Stylizacja ${active.name} gotowa`);
+      toast.success(`Stylizacja ${chosen.name} gotowa`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Coś poszło nie tak";
       toast.error(msg);
@@ -63,11 +68,28 @@ export const Scanner = () => {
     }
   };
 
+  const approve = () => {
+    setDecision("approved");
+    window.dispatchEvent(new CustomEvent("lash:approved", { detail: { style: active.id } }));
+    toast.success("Świetnie! Dobieramy salony pod tę stylizację");
+    setTimeout(() => {
+      document.getElementById("salons")?.scrollIntoView({ behavior: "smooth" });
+    }, 200);
+  };
+
+  const reject = () => {
+    setDecision("rejected");
+    setResultImage(null);
+    toast("Spróbuj innej stylizacji poniżej", { icon: "✨" });
+  };
+
   const reset = () => {
     setSourceImage(null);
     setResultImage(null);
+    setDecision("pending");
   };
 
+  const suggestions = styles.filter((s) => s.id !== active.id);
   const displayed = resultImage ?? sourceImage;
 
   return (
@@ -213,31 +235,93 @@ export const Scanner = () => {
               </div>
             </div>
 
-            <div className="space-y-3">
-              <button
-                onClick={generate}
-                disabled={loading || !sourceImage}
-                className="w-full px-6 py-4 bg-gradient-gold text-primary-foreground text-xs tracking-[0.25em] uppercase font-medium flex items-center justify-center gap-3 hover:shadow-glow transition-luxe disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" /> Generowanie...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={16} /> Wygeneruj try-on AI
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => inputRef.current?.click()}
-                disabled={loading}
-                className="w-full px-6 py-4 border border-primary/40 text-foreground text-xs tracking-[0.25em] uppercase flex items-center justify-center gap-3 hover:bg-primary/5 transition-luxe disabled:opacity-50"
-              >
-                <Upload size={16} />
-                {sourceImage ? "Wgraj inne zdjęcie" : "Wgraj swoje zdjęcie"}
-              </button>
-            </div>
+            {decision !== "approved" && (
+              <div className="space-y-3">
+                <button
+                  onClick={() => generate()}
+                  disabled={loading || !sourceImage}
+                  className="w-full px-6 py-4 bg-gradient-gold text-primary-foreground text-xs tracking-[0.25em] uppercase font-medium flex items-center justify-center gap-3 hover:shadow-glow transition-luxe disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" /> Generowanie...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={16} /> {resultImage ? "Wygeneruj ponownie" : "Wygeneruj try-on AI"}
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => inputRef.current?.click()}
+                  disabled={loading}
+                  className="w-full px-6 py-4 border border-primary/40 text-foreground text-xs tracking-[0.25em] uppercase flex items-center justify-center gap-3 hover:bg-primary/5 transition-luxe disabled:opacity-50"
+                >
+                  <Upload size={16} />
+                  {sourceImage ? "Wgraj inne zdjęcie" : "Wgraj swoje zdjęcie"}
+                </button>
+              </div>
+            )}
+
+            {resultImage && decision === "pending" && !loading && (
+              <div className="space-y-4 p-5 border border-primary/30 bg-primary/5">
+                <div className="text-[10px] tracking-[0.3em] uppercase text-primary text-center">
+                  Podoba Ci się efekt?
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={reject}
+                    className="px-4 py-3 border border-border text-foreground text-[11px] tracking-[0.25em] uppercase flex items-center justify-center gap-2 hover:border-destructive hover:text-destructive transition-luxe"
+                  >
+                    <X size={14} /> Odrzuć
+                  </button>
+                  <button
+                    onClick={approve}
+                    className="px-4 py-3 bg-gradient-gold text-primary-foreground text-[11px] tracking-[0.25em] uppercase font-medium flex items-center justify-center gap-2 hover:shadow-glow transition-luxe"
+                  >
+                    <Check size={14} /> Zatwierdź
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {decision === "rejected" && !loading && (
+              <div className="space-y-4 p-5 border border-primary/30 bg-card">
+                <div className="text-[10px] tracking-[0.3em] uppercase text-primary text-center">
+                  Może któraś z tych?
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  {suggestions.map((s) => (
+                    <button
+                      key={s.id}
+                      onClick={() => generate(s)}
+                      className="group relative aspect-square overflow-hidden border border-border hover:border-primary transition-luxe"
+                    >
+                      <img src={s.img} alt={s.name} className="w-full h-full object-cover" loading="lazy" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/95 via-background/30 to-transparent" />
+                      <span className="absolute bottom-2 left-2 right-2 font-display text-sm">
+                        {s.name}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {decision === "approved" && (
+              <div className="p-5 border border-primary/40 bg-primary/5 text-center space-y-3">
+                <div className="text-[10px] tracking-[0.3em] uppercase text-primary">
+                  Stylizacja zatwierdzona
+                </div>
+                <div className="font-display text-2xl text-gold">{active.name}</div>
+                <button
+                  onClick={() => setDecision("pending")}
+                  className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hover:text-primary transition-luxe"
+                >
+                  ← Wróć do wyboru
+                </button>
+              </div>
+            )}
 
             <div className="hairline" />
 
