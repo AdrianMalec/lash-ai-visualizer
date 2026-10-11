@@ -24,7 +24,13 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { imageUrl, style } = await req.json();
+    const { imageUrl, style, engine } = await req.json();
+    const ENGINES: Record<string, string> = {
+      fast: "google/gemini-3.1-flash-lite-image",
+      pro: "google/gemini-3-pro-image",
+      classic: "google/gemini-2.5-flash-image",
+    };
+    const model = ENGINES[engine] ?? ENGINES.classic;
 
     if (!imageUrl || typeof imageUrl !== "string") {
       return new Response(JSON.stringify({ error: "imageUrl is required" }), {
@@ -45,7 +51,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-image",
+        model,
         messages: [
           {
             role: "user",

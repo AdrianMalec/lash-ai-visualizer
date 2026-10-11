@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
+import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
 
 const links = [
   { id: "hero", label: "Start" },
@@ -11,6 +13,13 @@ const links = [
 export const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setEmail(s?.user?.email ?? null));
+    supabase.auth.getSession().then(({ data }) => setEmail(data.session?.user?.email ?? null));
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 30);
@@ -45,6 +54,19 @@ export const Navbar = () => {
               {l.label}
             </button>
           ))}
+          {email ? (
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="text-sm tracking-wide text-muted-foreground hover:text-primary transition-luxe"
+              title={email}
+            >
+              Wyloguj
+            </button>
+          ) : (
+            <Link to="/auth" className="text-sm tracking-wide text-muted-foreground hover:text-primary transition-luxe">
+              Zaloguj
+            </Link>
+          )}
           <button
             onClick={() => scrollTo("scanner")}
             className="px-6 py-2.5 bg-gradient-gold text-primary-foreground text-xs tracking-[0.2em] uppercase font-medium hover:shadow-glow transition-luxe"
