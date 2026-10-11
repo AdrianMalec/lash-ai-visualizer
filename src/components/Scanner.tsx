@@ -14,6 +14,12 @@ const styles = [
   { id: "fox", name: "Fox Eye", img: lashFox },
 ];
 
+const engines = [
+  { id: "pro", name: "Pro", desc: "Najwyższy realizm" },
+  { id: "fast", name: "Fast", desc: "Najszybszy" },
+  { id: "classic", name: "Classic", desc: "Zbalansowany" },
+];
+
 const fileToDataUrl = (file: File): Promise<string> =>
   new Promise((res, rej) => {
     const r = new FileReader();
@@ -24,6 +30,7 @@ const fileToDataUrl = (file: File): Promise<string> =>
 
 export const Scanner = () => {
   const [active, setActive] = useState(styles[1]);
+  const [engine, setEngine] = useState("pro");
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -53,7 +60,7 @@ export const Scanner = () => {
     setDecision("pending");
     try {
       const { data, error } = await supabase.functions.invoke("lash-tryon", {
-        body: { imageUrl: sourceImage, style: chosen.id },
+        body: { imageUrl: sourceImage, style: chosen.id, engine },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
@@ -230,6 +237,25 @@ export const Scanner = () => {
                         </span>
                       )}
                     </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs tracking-[0.3em] text-muted-foreground uppercase mb-4">Silnik AI</div>
+              <div className="grid grid-cols-3 gap-2">
+                {engines.map((en) => (
+                  <button
+                    key={en.id}
+                    onClick={() => setEngine(en.id)}
+                    disabled={loading}
+                    className={`px-3 py-3 border text-left transition-luxe disabled:opacity-50 ${
+                      engine === en.id ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                    }`}
+                  >
+                    <div className="font-display text-base">{en.name}</div>
+                    <div className="text-[10px] text-muted-foreground">{en.desc}</div>
                   </button>
                 ))}
               </div>
