@@ -24,7 +24,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { imageUrl, style, engine } = await req.json();
+    const { imageUrl, style, engine, customDescription } = await req.json();
     const ENGINES: Record<string, string> = {
       fast: "google/gemini-3.1-flash-lite-image",
       pro: "google/gemini-3-pro-image",
@@ -39,7 +39,11 @@ serve(async (req) => {
       });
     }
 
-    const prompt = STYLE_PROMPTS[style] ?? STYLE_PROMPTS.classic;
+    const prompt =
+      STYLE_PROMPTS[style] ??
+      (typeof customDescription === "string" && customDescription.trim()
+        ? `Apply eyelash extensions in this style: ${customDescription.slice(0, 400)}. ` + REALISM
+        : STYLE_PROMPTS.classic);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");

@@ -2,31 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import salon1 from "@/assets/salon-1.jpg";
 import salon2 from "@/assets/salon-2.jpg";
 import salon3 from "@/assets/salon-3.jpg";
-import lashClassic from "@/assets/lash-classic.jpg";
-import lashVolume from "@/assets/lash-volume.jpg";
-import lashCateye from "@/assets/lash-cateye.jpg";
-import lashFox from "@/assets/lash-fox.jpg";
+import { supabase } from "@/integrations/supabase/client";
+import { useStyles, styleImage } from "@/lib/data";
 import { MapPin, Star, Calendar, Award, Sparkles, Eye } from "lucide-react";
 
-type Style = "classic" | "volume" | "cateye" | "doll" | "fox" | "wet";
-
-const STYLE_LABEL: Record<Style, string> = {
-  classic: "Classic",
-  volume: "Mega Volume",
-  cateye: "Cat Eye",
-  doll: "Doll",
-  fox: "Fox Eye",
-  wet: "Wet Look",
-};
-
-const STYLE_IMG: Partial<Record<Style, string>> = {
-  classic: lashClassic,
-  volume: lashVolume,
-  cateye: lashCateye,
-  fox: lashFox,
-  doll: lashClassic,
-  wet: lashVolume,
-};
+type Style = string;
+const SALON_IMGS = [salon1, salon2, salon3];
 
 type Salon = {
   name: string;
@@ -36,64 +17,42 @@ type Salon = {
   rating: number;
   reviews: number;
   price: string;
-  portfolio: Partial<Record<Style, number>>; // 0-100 mastery per style
+  portfolio: Record<string, number>;
 };
-
-const SALONS: Salon[] = [
-  {
-    name: "Maison Lumière",
-    stylist: "Anna Kowalewska",
-    img: salon1,
-    city: "Warszawa, Mokotów",
-    rating: 4.98,
-    reviews: 312,
-    price: "od 380 zł",
-    portfolio: { volume: 98, doll: 90, classic: 82, cateye: 74 },
-  },
-  {
-    name: "Velvet Lash Bar",
-    stylist: "Karolina Wiśniewska",
-    img: salon2,
-    city: "Kraków, Kazimierz",
-    rating: 4.94,
-    reviews: 248,
-    price: "od 340 zł",
-    portfolio: { cateye: 97, fox: 92, wet: 80, classic: 78 },
-  },
-  {
-    name: "Noir Atelier",
-    stylist: "Magda Borkowska",
-    img: salon3,
-    city: "Wrocław, Stare Miasto",
-    rating: 4.96,
-    reviews: 189,
-    price: "od 420 zł",
-    portfolio: { fox: 96, wet: 94, volume: 88, cateye: 85 },
-  },
-  {
-    name: "Studio Éclat",
-    stylist: "Julia Nowak",
-    img: salon2,
-    city: "Gdańsk, Wrzeszcz",
-    rating: 4.92,
-    reviews: 156,
-    price: "od 360 zł",
-    portfolio: { classic: 96, doll: 88, volume: 84, cateye: 70 },
-  },
-  {
-    name: "Atelier Rouge",
-    stylist: "Zofia Lewandowska",
-    img: salon1,
-    city: "Poznań, Jeżyce",
-    rating: 4.9,
-    reviews: 201,
-    price: "od 350 zł",
-    portfolio: { doll: 95, classic: 90, volume: 82, fox: 76 },
-  },
-];
 
 export const Salons = () => {
   const [approvedStyle, setApprovedStyle] = useState<Style | null>(null);
+  const [salons, setSalons] = useState<Salon[]>([]);
+  const styles = useStyles();
+  const STYLE_LABEL = useMemo(
+    () => Object.fromEntries(styles.map((s) => [s.slug, s.name])) as Record<string, string>,
+    [styles],
+  );
+  const STYLE_IMG = useMemo(
+    () => Object.fromEntries(styles.map((s) => [s.slug, s.img])) as Record<string, string>,
+    [styles],
+  );
+  const lashClassic = styleImage("classic");
+
+  useEffect(() => {
+    supabase
+      .from("salons")
+      .select("*")
+      .then(({ data }) =>
+        setSalons(
+          (data ?? []).map((s, i) => ({
+            name: s.name,
+            stylist: s.stylist,
+            img: s.image_url || SALON_IMGS[i % SALON_IMGS.length],
+            city: s.city,
+            rating: Number(s.rating),
+            reviews: s.reviews,
+            price: s.price,
+            portfolio: (s.portfolio ?? {}) as Record<string, number>,
+          })),
+        ),
+      );
+  }, []);
 
   useEffect(() => {
     const onApproved = (e: Event) => {
@@ -105,7 +64,7 @@ export const Salons = () => {
   }, []);
 
   const ranked = useMemo(() => {
-    const scored = SALONS.map((s) => {
+    const scored = salons.map((s) => {
       const base = approvedStyle ? s.portfolio[approvedStyle] ?? 0 : 90;
       const match = Math.min(99, Math.round(base + (s.rating - 4.9) * 8));
       const topStyles = (Object.entries(s.portfolio) as [Style, number][])
@@ -115,11 +74,10 @@ export const Salons = () => {
       return { ...s, match, specialty, topStyles };
     });
     scored.sort((a, b) => b.match - a.match);
-    // when a style is approved, show only salons that actually master it (>=70)
     return approvedStyle
       ? scored.filter((s) => (s.portfolio[approvedStyle] ?? 0) >= 70).slice(0, 3)
       : scored.slice(0, 3);
-  }, [approvedStyle]);
+  }, [approvedStyle, salons]);
 
   return (
     <section id="salons" className="relative py-32">

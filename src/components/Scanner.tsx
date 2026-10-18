@@ -1,18 +1,10 @@
-import { useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import lashClassic from "@/assets/lash-classic.jpg";
-import lashVolume from "@/assets/lash-volume.jpg";
-import lashCateye from "@/assets/lash-cateye.jpg";
-import lashFox from "@/assets/lash-fox.jpg";
+import { useStyles } from "@/lib/data";
 import { Upload, Check, Sparkles, Loader2, RefreshCw, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 
-const styles = [
-  { id: "classic", name: "Classic", img: lashClassic },
-  { id: "volume", name: "Mega Volume", img: lashVolume },
-  { id: "cateye", name: "Cat Eye", img: lashCateye },
-  { id: "fox", name: "Fox Eye", img: lashFox },
-];
+type UiStyle = { id: string; name: string; img: string; description: string };
 
 const engines = [
   { id: "pro", name: "Pro", desc: "Najwyższy realizm" },
@@ -29,7 +21,17 @@ const fileToDataUrl = (file: File): Promise<string> =>
   });
 
 export const Scanner = () => {
-  const [active, setActive] = useState(styles[1]);
+  const dbStyles = useStyles();
+  const styles: UiStyle[] = useMemo(
+    () => dbStyles.map((s) => ({ id: s.slug, name: s.name, img: s.img, description: s.description })),
+    [dbStyles],
+  );
+  const [activeId, setActiveId] = useState<string | null>(null);
+  useEffect(() => {
+    if (styles.length && !styles.find((s) => s.id === activeId)) setActiveId(styles[0].id);
+  }, [styles, activeId]);
+  const active: UiStyle = styles.find((s) => s.id === activeId) ?? { id: "", name: "", img: "", description: "" };
+  const setActive = (s: UiStyle) => setActiveId(s.id);
   const [engine, setEngine] = useState("pro");
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
@@ -48,19 +50,25 @@ export const Scanner = () => {
     setDecision("pending");
   };
 
-  const generate = async (styleOverride?: typeof styles[number]) => {
+  const generate = async (styleOverride?: UiStyle) => {
     if (!sourceImage) {
       toast.error("Najpierw wgraj swoje zdjęcie");
       return;
     }
     const chosen = styleOverride ?? active;
+    if (!chosen.id) return;
     if (styleOverride) setActive(styleOverride);
     setLoading(true);
     setResultImage(null);
     setDecision("pending");
     try {
       const { data, error } = await supabase.functions.invoke("lash-tryon", {
-        body: { imageUrl: sourceImage, style: chosen.id, engine },
+        body: {
+          imageUrl: sourceImage,
+          style: chosen.id,
+          engine,
+          customDescription: `${chosen.name}. ${chosen.description}`.slice(0, 400),
+        },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
