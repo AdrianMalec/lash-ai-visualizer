@@ -39,7 +39,11 @@ serve(async (req) => {
       });
     }
 
-    const prompt = STYLE_PROMPTS[style] ?? STYLE_PROMPTS.classic;
+    const prompt =
+      STYLE_PROMPTS[style] ??
+      (typeof customDescription === "string" && customDescription.trim()
+        ? `Apply eyelash extensions in this style: ${customDescription.slice(0, 400)}. ` + REALISM
+        : STYLE_PROMPTS.classic);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
