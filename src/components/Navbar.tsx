@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsAdmin } from "@/lib/data";
 
 const links = [
   { id: "hero", label: "Start" },
@@ -14,6 +15,7 @@ export const Navbar = () => {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
+  const isAdmin = useIsAdmin();
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setEmail(s?.user?.email ?? null));
@@ -54,6 +56,11 @@ export const Navbar = () => {
               {l.label}
             </button>
           ))}
+          {isAdmin && (
+            <Link to="/admin" className="text-sm tracking-wide text-primary hover:text-gold transition-luxe">
+              Admin
+            </Link>
+          )}
           {email ? (
             <button
               onClick={() => supabase.auth.signOut()}
