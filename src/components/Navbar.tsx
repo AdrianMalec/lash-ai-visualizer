@@ -3,6 +3,7 @@ import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin } from "@/lib/data";
+import { Button } from "@/components/ui/button";
 
 const links = [
   { id: "hero", label: "Start" },
@@ -70,9 +71,10 @@ export const Navbar = () => {
               Wyloguj
             </button>
           ) : (
-            <Link to="/auth" className="text-sm tracking-wide text-muted-foreground hover:text-primary transition-luxe">
-              Zaloguj
-            </Link>
+            <div className="flex items-center gap-3">
+              <Button asChild variant="ghost" size="sm"><Link to="/auth">Zaloguj</Link></Button>
+              <Button asChild variant="outline" size="sm"><Link to="/auth?mode=signup">Zarejestruj się</Link></Button>
+            </div>
           )}
           <button
             onClick={() => scrollTo("scanner")}
@@ -82,9 +84,9 @@ export const Navbar = () => {
           </button>
         </div>
 
-        <button className="md:hidden text-foreground" onClick={() => setOpen(!open)} aria-label="menu">
+        <Button variant="ghost" size="icon" className="md:hidden text-foreground" onClick={() => setOpen(!open)} aria-label={open ? "Zamknij menu" : "Otwórz menu"} aria-expanded={open}>
           {open ? <X size={22} /> : <Menu size={22} />}
-        </button>
+        </Button>
       </nav>
 
       {open && (
@@ -99,6 +101,17 @@ export const Navbar = () => {
                 {l.label}
               </button>
             ))}
+            <div className="border-t border-border pt-4 flex flex-col gap-3">
+              {isAdmin && <Button asChild variant="outline"><Link to="/admin" onClick={() => setOpen(false)}>Admin</Link></Button>}
+              {email ? (
+                <Button variant="outline" onClick={() => { supabase.auth.signOut(); setOpen(false); }}>Wyloguj</Button>
+              ) : (
+                <>
+                  <Button asChild variant="outline"><Link to="/auth" onClick={() => setOpen(false)}>Zaloguj</Link></Button>
+                  <Button asChild><Link to="/auth?mode=signup" onClick={() => setOpen(false)}>Zarejestruj się</Link></Button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
