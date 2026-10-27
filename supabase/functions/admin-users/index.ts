@@ -23,15 +23,33 @@ Deno.serve(async (req) => {
       const { data, error } = await admin.auth.admin.listUsers({ perPage: 1000 });
       if (error) throw error;
       const { data: roles } = await admin.from("user_roles").select("user_id, role");
+      const { data: profs } = await admin.from("profiles").select("*");
       return json({
-        users: data.users.map((x) => ({
-          id: x.id,
-          email: x.email,
-          created_at: x.created_at,
-          provider: x.app_metadata?.provider,
-          isAdmin: !!roles?.find((r) => r.user_id === x.id && r.role === "admin"),
-        })),
+        users: data.users.map((x) => {
+          const p = profs?.find((r) => r.id === x.id);
+          return {
+            id: x.id,
+            email: x.email,
+            created_at: x.created_at,
+            provider: x.app_metadata?.provider,
+            isAdmin: !!roles?.find((r) => r.user_id === x.id && r.role === "admin"),
+            status: p?.status ?? "pending",
+            account_type: p?.account_type ?? "user",
+            company_name: p?.company_name, nip: p?.nip, city: p?.city, address: p?.address,
+          };
+        }),
       });
+    }
+    if (action === "approve" || action === "reject") {
+      if (!userId) return json({ error: "Brak użytkownika" }, 400);
+      const status = action === "approve" ? "approved" : "rejected";
+      const { data: p, error } = await admin.from("profiles").update({ status }).eq("id", userId).select().maybeSingle();
+      if (error) throw error;
+      if (action === "approve" && p?.account_type === "salon" && p.company_name) {
+        const { data: ex } = await admin.from("salons").select("id").eq("name", p.company_name).maybeSingle();
+        if (!ex) await admin.from("salons").insert({ name: p.company_name, city: p.city ?? "", rating: 5, portfolio: {} });
+      }
+      return json({ ok: true });
     }
     if (action === "delete") {
       if (!userId || userId === u.user.id) return json({ error: "Nie możesz usunąć własnego konta" }, 400);
