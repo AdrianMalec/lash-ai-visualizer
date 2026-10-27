@@ -94,6 +94,11 @@ const Auth = () => {
         <p className="text-center text-xs tracking-[0.3em] uppercase text-muted-foreground mb-8">
           {mode === "login" ? "Zaloguj się" : "Załóż konto"}
         </p>
+        {mode !== "login" && (
+          <p className="text-center text-[11px] text-muted-foreground -mt-4 mb-6">
+            Nowe konta są aktywowane po akceptacji administratora.
+          </p>
+        )}
 
         <div className="space-y-3 mb-6">
           <button
@@ -134,22 +139,45 @@ const Auth = () => {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full bg-background border border-border px-4 py-3 text-sm focus:border-primary outline-none"
           />
+          {mode === "salon" && (
+            <>
+              <div className="flex gap-2">
+                <input required inputMode="numeric" placeholder="NIP (10 cyfr)" value={salon.nip}
+                  onChange={(e) => { setSalon({ ...salon, nip: e.target.value }); setNipInfo(null); }} className={field} />
+                <button type="button" onClick={checkNip}
+                  className="px-4 border border-border hover:border-primary text-[11px] tracking-[0.2em] uppercase whitespace-nowrap">
+                  Sprawdź
+                </button>
+              </div>
+              {nipInfo && <p className={`text-xs ${nipInfo.ok ? "text-primary" : "text-destructive"}`}>{nipInfo.text}</p>}
+              <input required placeholder="Nazwa salonu" value={salon.company_name}
+                onChange={(e) => setSalon({ ...salon, company_name: e.target.value })} className={field} />
+              <input required placeholder="Miasto" value={salon.city}
+                onChange={(e) => setSalon({ ...salon, city: e.target.value })} className={field} />
+              <input required placeholder="Adres salonu" value={salon.address}
+                onChange={(e) => setSalon({ ...salon, address: e.target.value })} className={field} />
+            </>
+          )}
           <button
             type="submit"
             disabled={loading}
             className="w-full px-6 py-4 bg-gradient-gold text-primary-foreground text-xs tracking-[0.25em] uppercase font-medium flex items-center justify-center gap-2 disabled:opacity-50"
           >
             {loading && <Loader2 size={14} className="animate-spin" />}
-            {mode === "login" ? "Zaloguj" : "Zarejestruj"}
+            {mode === "login" ? "Zaloguj" : mode === "salon" ? "Zarejestruj salon" : "Zarejestruj"}
           </button>
         </form>
 
-        <button
-          onClick={() => setMode(mode === "login" ? "signup" : "login")}
-          className="mt-6 w-full text-center text-xs text-muted-foreground hover:text-primary transition-luxe"
-        >
-          {mode === "login" ? "Nie masz konta? Zarejestruj się" : "Masz konto? Zaloguj się"}
-        </button>
+        {mode === "login" && (
+          <button onClick={reset} className="mt-4 w-full text-center text-xs text-muted-foreground hover:text-primary">
+            Nie pamiętasz hasła / logowałeś się przez Google? Ustaw hasło
+          </button>
+        )}
+        <div className="mt-6 flex flex-col gap-2 text-center text-xs text-muted-foreground">
+          {mode !== "login" && <button onClick={() => setMode("login")} className="hover:text-primary">Masz konto? Zaloguj się</button>}
+          {mode !== "signup" && <button onClick={() => setMode("signup")} className="hover:text-primary">Załóż konto klientki</button>}
+          {mode !== "salon" && <button onClick={() => setMode("salon")} className="hover:text-primary">Zarejestruj salon (wymagany NIP)</button>}
+        </div>
       </div>
     </main>
   );
