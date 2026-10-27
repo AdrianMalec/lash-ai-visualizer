@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useIsAdmin, styleImage } from "@/lib/data";
 import { toast } from "sonner";
-import { Trash2, Plus, Loader2, Shield } from "lucide-react";
+import { Trash2, Plus, Loader2, Shield, Check, X } from "lucide-react";
 
 type Tab = "styles" | "salons" | "users";
 const input = "w-full bg-background border border-border px-3 py-2 text-sm focus:border-primary outline-none";
@@ -138,15 +138,31 @@ const UsersTab = () => {
   if (loading) return <Loader2 className="animate-spin text-primary" />;
   return (
     <div className="space-y-3">
-      {rows.map((u) => (
-        <div key={u.id} className="flex items-center gap-4 p-4 border border-border bg-card">
+      {[...rows].sort((a, b) => (a.status === "pending" ? -1 : 0) - (b.status === "pending" ? -1 : 0)).map((u) => (
+        <div key={u.id} className="flex flex-wrap items-center gap-4 p-4 border border-border bg-card">
           <div className="flex-1 min-w-0">
-            <div className="text-sm truncate">{u.email}</div>
+            <div className="text-sm truncate">
+              {u.email}
+              <span className={`ml-2 text-[10px] uppercase tracking-widest ${u.status === "approved" ? "text-primary" : u.status === "rejected" ? "text-destructive" : "text-muted-foreground"}`}>
+                {u.status === "approved" ? "zaakceptowane" : u.status === "rejected" ? "odrzucone" : "czeka na akceptację"}
+              </span>
+            </div>
             <div className="text-[11px] text-muted-foreground">
-              {u.provider} · {new Date(u.created_at).toLocaleDateString("pl-PL")}
+              {u.account_type === "salon" ? "Salon" : "Klientka"} · {u.provider} · {new Date(u.created_at).toLocaleDateString("pl-PL")}
               {u.isAdmin && <span className="text-primary"> · ADMIN</span>}
             </div>
+            {u.account_type === "salon" && (
+              <div className="text-[11px] text-foreground mt-1">
+                {u.company_name} · NIP {u.nip} · {u.city}, {u.address}
+              </div>
+            )}
           </div>
+          {u.status !== "approved" && (
+            <button className={btnGold} onClick={() => act("approve", u.id, "Konto zaakceptowane")}><Check size={14} /> Akceptuj</button>
+          )}
+          {u.status === "pending" && (
+            <button className={btnDel} title="Odrzuć" onClick={() => act("reject", u.id, "Konto odrzucone")}><X size={14} /></button>
+          )}
           <button className={btnDel} title="Przełącz admina" onClick={() => act("toggleAdmin", u.id, "Zmieniono rolę")}>
             <Shield size={14} />
           </button>
