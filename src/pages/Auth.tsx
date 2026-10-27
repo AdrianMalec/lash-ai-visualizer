@@ -5,13 +5,20 @@ import { lovable } from "@/integrations/lovable/index";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 
+const field = "w-full bg-background border border-border px-4 py-3 text-sm focus:border-primary outline-none";
+
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState<"login" | "signup">(searchParams.get("mode") === "signup" ? "signup" : "login");
+  const initial = searchParams.get("mode");
+  const [mode, setMode] = useState<"login" | "signup" | "salon">(
+    initial === "signup" ? "signup" : initial === "salon" ? "salon" : "login",
+  );
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [salon, setSalon] = useState({ company_name: "", nip: "", city: "", address: "" });
+  const [nipInfo, setNipInfo] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => data.session && navigate("/"));
@@ -19,22 +26,46 @@ const Auth = () => {
     return () => sub.subscription.unsubscribe();
   }, [navigate]);
 
+  const checkNip = async () => {
+    const { data, error } = await supabase.functions.invoke("verify-nip", { body: { nip: salon.nip } });
+    if (error || !data?.exists) {
+      setNipInfo({ ok: false, text: data?.error ?? "Nie udało się sprawdzić NIP" });
+      return false;
+    }
+    setNipInfo({ ok: true, text: `Firma znaleziona: ${data.name}` });
+    if (!salon.company_name) setSalon((s) => ({ ...s, company_name: data.name }));
+    return true;
+  };
+
+  const reset = async () => {
+    if (!email) return toast.error("Wpisz najpierw adres e-mail");
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (error) return toast.error(error.message);
+    toast.success("Wysłaliśmy link do ustawienia hasła");
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
-      if (mode === "signup") {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: window.location.origin },
-        });
-        if (error) throw error;
-        toast.success("Sprawdź skrzynkę e-mail, aby potwierdzić konto");
-      } else {
+      if (mode === "login") {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        return;
       }
+      if (mode === "salon" && !(await checkNip())) return;
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: window.location.origin,
+          data: mode === "salon" ? { account_type: "salon", ...salon } : { account_type: "user" },
+        },
+      });
+      if (error) throw error;
+      toast.success("Potwierdź e-mail. Konto będzie aktywne po akceptacji administratora.");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Błąd logowania");
     } finally {
