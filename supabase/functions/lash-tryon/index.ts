@@ -5,7 +5,23 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const REALISM = "PHOTOREALISTIC professional beauty photography result. Preserve the person's identity, face shape, skin texture, pores, eye color, iris details, eyebrows, makeup, hair, background and original lighting EXACTLY — do not restyle, do not smooth skin, do not change camera angle. Modify ONLY the upper lash line. Individual fibers must be visible, with natural taper, believable root attachment on the lash line, subtle micro-shadows on the eyelid, and slight variation in length and direction between fibers. Avoid painted-on, stickered, symmetrical, cartoonish, plastic or CGI look. No mascara clumps. Match the color temperature and depth of field of the source photo. Output only the edited photo.";
+const REALISM = `
+STRICT LOCAL EDIT — THIS IS A PHOTO RETOUCH, NOT A NEW IMAGE.
+The ONLY pixels you may change are the eyelashes growing from the upper eyelid margin (and, only if needed, a few tiny lower lashes). Everything else must stay pixel-identical to the input photo.
+
+DO NOT CHANGE (absolutely forbidden):
+- face shape, jaw, nose, lips, mouth, cheeks, chin, ears, forehead
+- skin tone, skin texture, pores, freckles, moles, wrinkles, blemishes — no smoothing, no beautify filter
+- eye shape, eyelid shape, eye size, iris color, pupils, eye whites, catchlights, eye direction
+- eyebrows, eyeshadow, eyeliner, makeup, hair, hairline, accessories, clothing
+- background, framing, crop, resolution, camera angle, perspective, head pose, expression
+- lighting, white balance, color grading, contrast, sharpness, noise/grain
+Do not re-render or regenerate the face. Do not make the person look younger, slimmer or more attractive. Same person, same photo — only the lashes are new.
+
+LASH REALISM:
+Individual fibers with natural taper, rooted exactly on the lash line, following the eyelid curvature, slight natural variation in length and direction, subtle micro-shadow on the lid. Lighting and focus of the lashes must match the photo. No painted, sticker, CGI or cartoon look, no mascara clumps, no perfect symmetry.
+
+Return the full original photo with only the lashes edited.`;
 
 const STYLE_PROMPTS: Record<string, string> = {
   classic:
