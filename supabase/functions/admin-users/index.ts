@@ -47,7 +47,8 @@ Deno.serve(async (req) => {
       if (error) throw error;
       if (action === "approve" && p?.account_type === "salon" && p.company_name) {
         const { data: ex } = await admin.from("salons").select("id").eq("name", p.company_name).maybeSingle();
-        if (!ex) await admin.from("salons").insert({ name: p.company_name, city: p.city ?? "", rating: 5, portfolio: {} });
+        if (!ex) await admin.from("salons").insert({ name: p.company_name, city: p.city ?? "", rating: 5, portfolio: {}, owner_id: p.id });
+        else await admin.from("salons").update({ owner_id: p.id }).eq("id", ex.id);
       }
       return json({ ok: true });
     }
