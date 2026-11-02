@@ -58,3 +58,20 @@ export const useIsAdmin = () => {
   }, []);
   return isAdmin;
 };
+
+export const useIsSalon = () => {
+  const [isSalon, setIsSalon] = useState(false);
+  useEffect(() => {
+    const check = async (uid?: string) => {
+      if (!uid) return setIsSalon(false);
+      const { data } = await supabase.from("profiles").select("account_type").eq("id", uid).maybeSingle();
+      setIsSalon(data?.account_type === "salon");
+    };
+    supabase.auth.getSession().then(({ data }) => check(data.session?.user.id));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      setTimeout(() => check(s?.user.id), 0);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+  return isSalon;
+};

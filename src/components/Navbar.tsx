@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Menu, X } from "lucide-react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useIsAdmin } from "@/lib/data";
+import { useIsAdmin, useIsSalon } from "@/lib/data";
 import { Button } from "@/components/ui/button";
 
 const links = [
@@ -17,6 +17,7 @@ export const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [email, setEmail] = useState<string | null>(null);
   const isAdmin = useIsAdmin();
+  const isSalon = useIsSalon();
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setEmail(s?.user?.email ?? null));
@@ -57,6 +58,11 @@ export const Navbar = () => {
               {l.label}
             </button>
           ))}
+          {isSalon && (
+            <Link to="/salon" className="text-sm tracking-wide text-primary hover:text-gold transition-luxe">
+              Mój salon
+            </Link>
+          )}
           {isAdmin && (
             <Link to="/admin" className="text-sm tracking-wide text-primary hover:text-gold transition-luxe">
               Admin
@@ -102,6 +108,7 @@ export const Navbar = () => {
               </button>
             ))}
             <div className="border-t border-border pt-4 flex flex-col gap-3">
+              {isSalon && <Button asChild variant="outline"><Link to="/salon" onClick={() => setOpen(false)}>Mój salon</Link></Button>}
               {isAdmin && <Button asChild variant="outline"><Link to="/admin" onClick={() => setOpen(false)}>Admin</Link></Button>}
               {email ? (
                 <Button variant="outline" onClick={() => { supabase.auth.signOut(); setOpen(false); }}>Wyloguj</Button>
