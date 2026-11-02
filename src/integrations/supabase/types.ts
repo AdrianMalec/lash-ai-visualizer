@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      appointments: {
+        Row: {
+          client_name: string
+          client_phone: string
+          created_at: string
+          duration_min: number
+          employee_id: string | null
+          id: string
+          notes: string
+          salon_id: string
+          service: string
+          starts_at: string
+        }
+        Insert: {
+          client_name: string
+          client_phone?: string
+          created_at?: string
+          duration_min?: number
+          employee_id?: string | null
+          id?: string
+          notes?: string
+          salon_id: string
+          service?: string
+          starts_at: string
+        }
+        Update: {
+          client_name?: string
+          client_phone?: string
+          created_at?: string
+          duration_min?: number
+          employee_id?: string | null
+          id?: string
+          notes?: string
+          salon_id?: string
+          service?: string
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "appointments_employee_id_fkey"
+            columns: ["employee_id"]
+            isOneToOne: false
+            referencedRelation: "salon_employees"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lash_styles: {
         Row: {
           created_at: string
@@ -80,6 +134,79 @@ export type Database = {
         }
         Relationships: []
       }
+      salon_employees: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          phone: string
+          role: string
+          salon_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          phone?: string
+          role?: string
+          salon_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string
+          role?: string
+          salon_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salon_employees_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salon_photos: {
+        Row: {
+          caption: string
+          created_at: string
+          id: string
+          salon_id: string
+          style_slug: string | null
+          url: string
+        }
+        Insert: {
+          caption?: string
+          created_at?: string
+          id?: string
+          salon_id: string
+          style_slug?: string | null
+          url: string
+        }
+        Update: {
+          caption?: string
+          created_at?: string
+          id?: string
+          salon_id?: string
+          style_slug?: string | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salon_photos_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       salons: {
         Row: {
           city: string
@@ -87,6 +214,7 @@ export type Database = {
           id: string
           image_url: string | null
           name: string
+          owner_id: string | null
           portfolio: Json
           price: string
           rating: number
@@ -99,6 +227,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           name: string
+          owner_id?: string | null
           portfolio?: Json
           price?: string
           rating?: number
@@ -111,6 +240,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           name?: string
+          owner_id?: string | null
           portfolio?: Json
           price?: string
           rating?: number
@@ -149,6 +279,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      owns_salon: { Args: { _salon_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user"
