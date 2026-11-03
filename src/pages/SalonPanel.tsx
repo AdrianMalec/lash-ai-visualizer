@@ -308,23 +308,27 @@ function ServicesTab({ salonId }: { salonId: string }) {
 
 /* ---------------- Calendar ---------------- */
 function CalendarTab({ salonId }: { salonId: string }) {
+  const isMobile = useIsMobile();
+  const dayCount = isMobile ? 3 : 7;
   const [week, setWeek] = useState(() => startOfWeek(new Date()));
   const [appts, setAppts] = useState<Appt[]>([]);
   const [team, setTeam] = useState<Employee[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [filter, setFilter] = useState("all");
   const [edit, setEdit] = useState<Partial<Appt> & { local?: string } | null>(null);
 
-  const weekEnd = useMemo(() => { const d = new Date(week); d.setDate(d.getDate() + 7); return d; }, [week]);
+  const weekEnd = useMemo(() => { const d = new Date(week); d.setDate(d.getDate() + dayCount); return d; }, [week, dayCount]);
   const load = () =>
     supabase.from("appointments").select("*").eq("salon_id", salonId)
       .gte("starts_at", week.toISOString()).lt("starts_at", weekEnd.toISOString()).order("starts_at")
       .then(({ data }) => setAppts((data ?? []) as Appt[]));
-  useEffect(() => { load(); }, [salonId, week]);
+  useEffect(() => { load(); }, [salonId, week, dayCount]);
   useEffect(() => {
     supabase.from("salon_employees").select("*").eq("salon_id", salonId).then(({ data }) => setTeam((data ?? []) as Employee[]));
+    supabase.from("salon_services").select("*").eq("salon_id", salonId).order("name").then(({ data }) => setServices((data ?? []) as Service[]));
   }, [salonId]);
 
-  const days = Array.from({ length: 7 }, (_, i) => { const d = new Date(week); d.setDate(d.getDate() + i); return d; });
+  const days = Array.from({ length: dayCount }, (_, i) => { const d = new Date(week); d.setDate(d.getDate() + i); return d; });
   const visible = appts.filter((a) => filter === "all" || a.employee_id === filter);
   const colorOf = (id: string | null) => team.find((t) => t.id === id)?.color ?? "hsl(var(--primary))";
 
