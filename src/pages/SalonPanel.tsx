@@ -420,7 +420,20 @@ function CalendarTab({ salonId }: { salonId: string }) {
             <div className="grid gap-3">
               <div><Label>Klientka</Label><Input value={edit.client_name ?? ""} onChange={(e) => setEdit({ ...edit, client_name: e.target.value })} /></div>
               <div><Label>Telefon</Label><Input value={edit.client_phone ?? ""} onChange={(e) => setEdit({ ...edit, client_phone: e.target.value })} /></div>
-              <div><Label>Usługa</Label><Input placeholder="np. Volume 4D – uzupełnienie" value={edit.service ?? ""} onChange={(e) => setEdit({ ...edit, service: e.target.value })} /></div>
+              <div>
+                <Label>Usługa</Label>
+                {services.length > 0 ? (
+                  <select value={edit.service ?? ""} onChange={(e) => {
+                    const s = services.find((x) => x.name === e.target.value);
+                    setEdit({ ...edit, service: e.target.value, duration_min: s?.duration_min ?? edit.duration_min });
+                  }} className="w-full h-10 bg-background border border-input px-3 text-sm">
+                    <option value="">— wybierz usługę —</option>
+                    {services.map((s) => <option key={s.id} value={s.name}>{s.name}{s.price && ` · ${s.price}`}</option>)}
+                  </select>
+                ) : (
+                  <Input placeholder="np. Volume 4D – uzupełnienie" value={edit.service ?? ""} onChange={(e) => setEdit({ ...edit, service: e.target.value })} />
+                )}
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <div><Label>Termin</Label><Input type="datetime-local" value={edit.local ?? ""} onChange={(e) => setEdit({ ...edit, local: e.target.value })} /></div>
                 <div><Label>Czas (min)</Label><Input type="number" min={15} step={15} value={edit.duration_min ?? 60} onChange={(e) => setEdit({ ...edit, duration_min: Number(e.target.value) })} /></div>
