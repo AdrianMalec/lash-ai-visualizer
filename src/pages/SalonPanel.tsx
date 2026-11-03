@@ -358,42 +358,43 @@ function CalendarTab({ salonId }: { salonId: string }) {
     setEdit(null); load();
   };
 
-  const ROW = 56; // px per hour
+  const ROW = isMobile ? 44 : 56; // px per hour
+  const shift = (n: number) => setWeek(new Date(week.getTime() + n * dayCount * 864e5));
   return (
     <div className="mt-6 space-y-4">
-      <div className="flex flex-wrap items-center gap-3">
-        <Button variant="outline" size="icon" onClick={() => setWeek(new Date(week.getTime() - 7 * 864e5))} aria-label="Poprzedni tydzień"><ChevronLeft /></Button>
-        <Button variant="outline" onClick={() => setWeek(startOfWeek(new Date()))}>Dziś</Button>
-        <Button variant="outline" size="icon" onClick={() => setWeek(new Date(week.getTime() + 7 * 864e5))} aria-label="Następny tydzień"><ChevronRight /></Button>
-        <span className="font-display text-xl ml-2">
-          {days[0].toLocaleDateString("pl-PL", { day: "numeric", month: "short" })} – {days[6].toLocaleDateString("pl-PL", { day: "numeric", month: "short", year: "numeric" })}
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+        <Button variant="outline" size="icon" onClick={() => shift(-1)} aria-label="Wstecz"><ChevronLeft /></Button>
+        <Button variant="outline" onClick={() => setWeek(isMobile ? new Date() : startOfWeek(new Date()))}>Dziś</Button>
+        <Button variant="outline" size="icon" onClick={() => shift(1)} aria-label="Dalej"><ChevronRight /></Button>
+        <span className="font-display text-lg sm:text-xl ml-1">
+          {days[0].toLocaleDateString("pl-PL", { day: "numeric", month: "short" })} – {days[dayCount - 1].toLocaleDateString("pl-PL", { day: "numeric", month: "short", year: "numeric" })}
         </span>
-        <select value={filter} onChange={(e) => setFilter(e.target.value)} className="ml-auto h-10 bg-background border border-input px-3 text-sm">
+        <select value={filter} onChange={(e) => setFilter(e.target.value)} className="ml-auto h-10 bg-background border border-input px-3 text-sm max-w-[45vw]">
           <option value="all">Wszyscy pracownicy</option>
           {team.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
         </select>
       </div>
 
-      <div className="border border-border bg-card overflow-x-auto">
-        <div className="grid min-w-[800px]" style={{ gridTemplateColumns: "60px repeat(7, 1fr)" }}>
+      <div className="border border-border bg-card overflow-x-auto touch-pan-x">
+        <div className="grid" style={{ gridTemplateColumns: `44px repeat(${dayCount}, minmax(${isMobile ? 96 : 110}px, 1fr))` }}>
           <div />
           {days.map((d, i) => {
             const today = d.toDateString() === new Date().toDateString();
             return (
-              <div key={i} className={`p-2 text-center border-l border-b border-border ${today ? "text-primary" : ""}`}>
-                <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground">{DAYS[i]}</div>
-                <div className="font-display text-xl">{d.getDate()}</div>
+              <div key={i} className={`p-1 sm:p-2 text-center border-l border-b border-border ${today ? "text-primary" : ""}`}>
+                <div className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground">{DAYS[(d.getDay() + 6) % 7]}</div>
+                <div className="font-display text-lg sm:text-xl">{d.getDate()}</div>
               </div>
             );
           })}
           <div>
-            {HOURS.map((h) => <div key={h} style={{ height: ROW }} className="text-[10px] text-muted-foreground text-right pr-2 pt-1">{h}:00</div>)}
+            {HOURS.map((h) => <div key={h} style={{ height: ROW }} className="text-[10px] text-muted-foreground text-right pr-1 sm:pr-2 pt-1">{h}:00</div>)}
           </div>
           {days.map((d, i) => (
             <div key={i} className="relative border-l border-border">
               {HOURS.map((h) => (
                 <button key={h} style={{ height: ROW }} onClick={() => openNew(d, h)}
-                  className="block w-full border-b border-border/50 hover:bg-primary/5 transition-colors" aria-label={`Dodaj wizytę ${DAYS[i]} ${h}:00`} />
+                  className="block w-full border-b border-border/50 hover:bg-primary/5 active:bg-primary/10 transition-colors" aria-label={`Dodaj wizytę ${DAYS[(d.getDay() + 6) % 7]} ${h}:00`} />
               ))}
               {visible.filter((a) => new Date(a.starts_at).toDateString() === d.toDateString()).map((a) => {
                 const s = new Date(a.starts_at);
