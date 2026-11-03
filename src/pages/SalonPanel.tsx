@@ -89,6 +89,7 @@ function PortfolioTab({ salonId, uid }: { salonId: string; uid: string }) {
   const styles = useStyles();
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [style, setStyle] = useState("");
+  const [customStyle, setCustomStyle] = useState("");
   const [caption, setCaption] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -109,12 +110,16 @@ function PortfolioTab({ salonId, uid }: { salonId: string; uid: string }) {
         const signed = await supabase.storage.from("salon-media").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
         if (signed.error) throw signed.error;
         const { error } = await supabase.from("salon_photos").insert({
-          salon_id: salonId, url: signed.data.signedUrl, style_slug: style || null, caption,
+          salon_id: salonId, url: signed.data.signedUrl,
+          style_slug: style === "__custom" ? null : style || null,
+          custom_style: style === "__custom" ? customStyle.trim() : "",
+          caption,
         });
         if (error) throw error;
       }
       toast.success("Dodano zdjęcia");
       setCaption("");
+      setCustomStyle("");
       load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Błąd wgrywania");
