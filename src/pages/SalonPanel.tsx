@@ -12,8 +12,9 @@ import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, Upload } from "lucide
 import { toast } from "sonner";
 
 type Salon = { id: string; name: string; city: string; stylist: string; price: string };
-type Photo = { id: string; url: string; style_slug: string | null; caption: string };
-type Employee = { id: string; name: string; role: string; phone: string; color: string };
+type Photo = { id: string; url: string; style_slug: string | null; custom_style: string; caption: string };
+type Employee = { id: string; name: string; role: string; phone: string; color: string; avatar_url: string | null };
+type Service = { id: string; name: string; description: string; price: string; duration_min: number };
 type Appt = {
   id: string; employee_id: string | null; client_name: string; client_phone: string;
   service: string; starts_at: string; duration_min: number; notes: string;
@@ -63,15 +64,17 @@ export default function SalonPanel() {
           <>
             <p className="text-gold font-display text-2xl mb-8">{salon.name}</p>
             <Tabs defaultValue="calendar">
-              <TabsList>
+              <TabsList className="flex-wrap h-auto">
                 <TabsTrigger value="calendar">Kalendarz</TabsTrigger>
+                <TabsTrigger value="services">Usługi</TabsTrigger>
                 <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
                 <TabsTrigger value="team">Pracownicy</TabsTrigger>
                 <TabsTrigger value="profile">Profil</TabsTrigger>
               </TabsList>
               <TabsContent value="calendar"><CalendarTab salonId={salon.id} /></TabsContent>
+              <TabsContent value="services"><ServicesTab salonId={salon.id} /></TabsContent>
               <TabsContent value="portfolio"><PortfolioTab salonId={salon.id} uid={uid!} /></TabsContent>
-              <TabsContent value="team"><TeamTab salonId={salon.id} /></TabsContent>
+              <TabsContent value="team"><TeamTab salonId={salon.id} uid={uid!} /></TabsContent>
               <TabsContent value="profile"><ProfileTab salon={salon} onSaved={setSalon} /></TabsContent>
             </Tabs>
           </>
