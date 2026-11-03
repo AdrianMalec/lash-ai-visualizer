@@ -182,9 +182,11 @@ function PortfolioTab({ salonId, uid }: { salonId: string; uid: string }) {
 }
 
 /* ---------------- Team ---------------- */
-function TeamTab({ salonId }: { salonId: string }) {
+function TeamTab({ salonId, uid }: { salonId: string; uid: string }) {
   const [list, setList] = useState<Employee[]>([]);
   const [form, setForm] = useState({ name: "", role: "Stylistka rzęs", phone: "", color: "#d4af37" });
+  const [avatar, setAvatar] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
   const load = () =>
     supabase.from("salon_employees").select("*").eq("salon_id", salonId).order("created_at")
       .then(({ data }) => setList((data ?? []) as Employee[]));
@@ -192,26 +194,55 @@ function TeamTab({ salonId }: { salonId: string }) {
 
   const add = async () => {
     if (!form.name.trim()) return toast.error("Podaj imię");
-    const { error } = await supabase.from("salon_employees").insert({ ...form, salon_id: salonId });
-    if (error) return toast.error(error.message);
-    setForm({ name: "", role: "Stylistka rzęs", phone: "", color: "#d4af37" });
-    load();
+    setBusy(true);
+    try {
+      let avatar_url: string | null = null;
+      if (avatar) {
+        if (avatar.size > 8 * 1024 * 1024) throw new Error("Zdjęcie: max 8 MB");
+        const path = `${uid}/${crypto.randomUUID()}-${avatar.name.replace(/[^\w.-]/g, "_")}`;
+        const up = await supabase.storage.from("salon-media").upload(path, avatar);
+        if (up.error) throw up.error;
+        const signed = await supabase.storage.from("salon-media").createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+        if (signed.error) throw signed.error;
+        avatar_url = signed.data.signedUrl;
+      }
+      const { error } = await supabase.from("salon_employees").insert({ ...form, salon_id: salonId, avatar_url });
+      if (error) throw error;
+      setForm({ name: "", role: "Stylistka rzęs", phone: "", color: "#d4af37" });
+      setAvatar(null);
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Błąd zapisu");
+    } finally { setBusy(false); }
   };
   const remove = async (id: string) => { await supabase.from("salon_employees").delete().eq("id", id); load(); };
 
   return (
     <div className="space-y-8 mt-6">
-      <div className="p-6 border border-border bg-card grid md:grid-cols-[1fr,1fr,1fr,80px,auto] gap-4 items-end">
+      <div className="p-6 border border-border bg-card grid md:grid-cols-[1fr,1fr,1fr,auto,80px,auto] gap-4 items-end">
         <div><Label>Imię i nazwisko</Label><Input className="mt-2" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
         <div><Label>Stanowisko</Label><Input className="mt-2" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} /></div>
         <div><Label>Telefon</Label><Input className="mt-2" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></div>
+        <div>
+          <Label>Zdjęcie</Label>
+          <Button asChild variant="outline" className="mt-2 w-full">
+            <label className="cursor-pointer">
+              <Upload /> {avatar ? avatar.name.slice(0, 12) : "Wybierz"}
+              <input type="file" accept="image/*" hidden onChange={(e) => setAvatar(e.target.files?.[0] ?? null)} />
+            </label>
+          </Button>
+        </div>
         <div><Label>Kolor</Label><Input type="color" className="mt-2 p-1" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} /></div>
-        <Button onClick={add}><Plus /> Dodaj</Button>
+        <Button onClick={add} disabled={busy}>{busy ? <Loader2 className="animate-spin" /> : <Plus />} Dodaj</Button>
       </div>
       <div className="grid md:grid-cols-3 gap-4">
         {list.map((e) => (
           <div key={e.id} className="p-5 border border-border bg-card flex items-center gap-4">
-            <span className="w-10 h-10 rounded-full shrink-0" style={{ background: e.color }} />
+            {e.avatar_url ? (
+              <img src={e.avatar_url} alt={e.name} className="w-12 h-12 rounded-full object-cover shrink-0 border-2" style={{ borderColor: e.color }} />
+            ) : (
+              <span className="w-10 h-10 rounded-full shrink-0" style={{ background: e.color }} />
+            )}
             <div className="flex-1">
               <div className="font-display text-xl">{e.name}</div>
               <div className="text-xs text-muted-foreground">{e.role}{e.phone && ` · ${e.phone}`}</div>
@@ -220,6 +251,55 @@ function TeamTab({ salonId }: { salonId: string }) {
           </div>
         ))}
         {list.length === 0 && <p className="text-muted-foreground">Nie dodano jeszcze pracowników.</p>}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Services ---------------- */
+function ServicesTab({ salonId }: { salonId: string }) {
+  const [list, setList] = useState<Service[]>([]);
+  const [form, setForm] = useState({ name: "", description: "", price: "", duration_min: 60 });
+  const load = () =>
+    supabase.from("salon_services").select("*").eq("salon_id", salonId).order("created_at")
+      .then(({ data }) => setList((data ?? []) as Service[]));
+  useEffect(() => { load(); }, [salonId]);
+
+  const add = async () => {
+    if (!form.name.trim()) return toast.error("Podaj nazwę usługi");
+    const { error } = await supabase.from("salon_services").insert({ ...form, salon_id: salonId });
+    if (error) return toast.error(error.message);
+    setForm({ name: "", description: "", price: "", duration_min: 60 });
+    load();
+  };
+  const remove = async (id: string) => { await supabase.from("salon_services").delete().eq("id", id); load(); };
+
+  return (
+    <div className="space-y-8 mt-6">
+      <div className="p-6 border border-border bg-card grid gap-4">
+        <div className="grid md:grid-cols-[2fr,1fr,1fr] gap-4">
+          <div><Label>Nazwa usługi</Label><Input className="mt-2" placeholder="np. Volume 4D – uzupełnienie" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
+          <div><Label>Cena</Label><Input className="mt-2" placeholder="np. 220 zł" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} /></div>
+          <div><Label>Czas (min)</Label><Input className="mt-2" type="number" min={15} step={15} value={form.duration_min} onChange={(e) => setForm({ ...form, duration_min: Number(e.target.value) })} /></div>
+        </div>
+        <div><Label>Opis</Label><Textarea className="mt-2" placeholder="Krótki opis usługi, używane materiały, efekt…" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} maxLength={500} /></div>
+        <Button onClick={add} className="w-fit"><Plus /> Dodaj usługę</Button>
+      </div>
+      <div className="grid md:grid-cols-2 gap-4">
+        {list.map((s) => (
+          <div key={s.id} className="p-5 border border-border bg-card flex items-start gap-4">
+            <div className="flex-1">
+              <div className="flex items-baseline justify-between gap-3">
+                <div className="font-display text-xl">{s.name}</div>
+                <div className="text-gold font-display text-lg whitespace-nowrap">{s.price}</div>
+              </div>
+              <div className="text-xs text-muted-foreground mb-2">{s.duration_min} min</div>
+              {s.description && <p className="text-sm text-muted-foreground">{s.description}</p>}
+            </div>
+            <Button size="icon" variant="ghost" onClick={() => remove(s.id)} aria-label="Usuń usługę"><Trash2 /></Button>
+          </div>
+        ))}
+        {list.length === 0 && <p className="text-muted-foreground">Nie dodano jeszcze usług.</p>}
       </div>
     </div>
   );
