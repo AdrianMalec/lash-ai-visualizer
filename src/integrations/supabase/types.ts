@@ -136,6 +136,7 @@ export type Database = {
       }
       salon_employees: {
         Row: {
+          avatar_url: string | null
           color: string
           created_at: string
           id: string
@@ -145,6 +146,7 @@ export type Database = {
           salon_id: string
         }
         Insert: {
+          avatar_url?: string | null
           color?: string
           created_at?: string
           id?: string
@@ -154,6 +156,7 @@ export type Database = {
           salon_id: string
         }
         Update: {
+          avatar_url?: string | null
           color?: string
           created_at?: string
           id?: string
@@ -176,6 +179,7 @@ export type Database = {
         Row: {
           caption: string
           created_at: string
+          custom_style: string
           id: string
           salon_id: string
           style_slug: string | null
@@ -184,6 +188,7 @@ export type Database = {
         Insert: {
           caption?: string
           created_at?: string
+          custom_style?: string
           id?: string
           salon_id: string
           style_slug?: string | null
@@ -192,6 +197,7 @@ export type Database = {
         Update: {
           caption?: string
           created_at?: string
+          custom_style?: string
           id?: string
           salon_id?: string
           style_slug?: string | null
@@ -200,6 +206,44 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "salon_photos_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salon_services: {
+        Row: {
+          created_at: string
+          description: string
+          duration_min: number
+          id: string
+          name: string
+          price: string
+          salon_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string
+          duration_min?: number
+          id?: string
+          name: string
+          price?: string
+          salon_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string
+          duration_min?: number
+          id?: string
+          name?: string
+          price?: string
+          salon_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salon_services_salon_id_fkey"
             columns: ["salon_id"]
             isOneToOne: false
             referencedRelation: "salons"

@@ -22,6 +22,13 @@
       "when": 1793621483165,
       "tag": "0002_salon_panel",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793699311275,
+      "tag": "0003_salon_services_and_employee_photos",
+      "breakpoints": true
     }
   ]
 }
