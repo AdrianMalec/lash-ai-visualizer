@@ -140,13 +140,18 @@ function PortfolioTab({ salonId, uid }: { salonId: string; uid: string }) {
             className="mt-2 w-full h-10 bg-background border border-input px-3 text-sm">
             <option value="">— bez kategorii —</option>
             {styles.map((s) => <option key={s.slug} value={s.slug}>{s.name}</option>)}
+            <option value="__custom">✎ Własna stylizacja…</option>
           </select>
+          {style === "__custom" && (
+            <Input className="mt-2" placeholder="np. Kim K, Manga, Wispy Hybrid"
+              value={customStyle} onChange={(e) => setCustomStyle(e.target.value)} maxLength={60} />
+          )}
         </div>
         <div>
           <Label>Opis (opcjonalnie)</Label>
           <Input className="mt-2" value={caption} onChange={(e) => setCaption(e.target.value)} maxLength={200} />
         </div>
-        <Button asChild disabled={busy}>
+        <Button asChild disabled={busy || (style === "__custom" && !customStyle.trim())}>
           <label className="cursor-pointer">
             {busy ? <Loader2 className="animate-spin" /> : <Upload />} Wgraj zdjęcia
             <input type="file" accept="image/*" multiple hidden onChange={(e) => upload(e.target.files)} />
@@ -161,7 +166,9 @@ function PortfolioTab({ salonId, uid }: { salonId: string; uid: string }) {
             <div key={p.id} className="relative group aspect-square border border-border overflow-hidden">
               <img src={p.url} alt={p.caption || "Zdjęcie z portfolio"} className="w-full h-full object-cover" />
               <div className="absolute inset-x-0 bottom-0 p-2 bg-background/80 text-xs">
-                <span className="text-primary">{styles.find((s) => s.slug === p.style_slug)?.name ?? "—"}</span>
+                <span className="text-primary">
+                  {p.custom_style || styles.find((s) => s.slug === p.style_slug)?.name || "—"}
+                </span>
                 {p.caption && <span className="text-muted-foreground"> · {p.caption}</span>}
               </div>
               <Button size="icon" variant="destructive" className="absolute top-2 right-2 opacity-0 group-hover:opacity-100"
