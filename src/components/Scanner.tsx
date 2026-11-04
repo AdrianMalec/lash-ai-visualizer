@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useStyles } from "@/lib/data";
 import { Upload, Check, Sparkles, Loader2, RefreshCw, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
+import { approveVisualization, clearSalonMatches } from "@/lib/salon-matching";
 
 type UiStyle = { id: string; name: string; img: string; description: string };
 
@@ -35,6 +36,7 @@ export const Scanner = () => {
   const [engine, setEngine] = useState("pro");
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
+  const [resultStyle, setResultStyle] = useState<UiStyle | null>(null);
   const [loading, setLoading] = useState(false);
   const [decision, setDecision] = useState<"pending" | "approved" | "rejected">("pending");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +49,8 @@ export const Scanner = () => {
     const dataUrl = await fileToDataUrl(file);
     setSourceImage(dataUrl);
     setResultImage(null);
+    setResultStyle(null);
+    clearSalonMatches();
     setDecision("pending");
   };
 
@@ -60,6 +64,8 @@ export const Scanner = () => {
     if (styleOverride) setActive(styleOverride);
     setLoading(true);
     setResultImage(null);
+    setResultStyle(null);
+    clearSalonMatches();
     setDecision("pending");
     try {
       const { data, error } = await supabase.functions.invoke("lash-tryon", {
@@ -74,6 +80,7 @@ export const Scanner = () => {
       if (data?.error) throw new Error(data.error);
       if (!data?.image) throw new Error("Brak obrazu w odpowiedzi");
       setResultImage(data.image);
+      setResultStyle(chosen);
       toast.success(`Stylizacja ${chosen.name} gotowa`);
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Coś poszło nie tak";
@@ -84,8 +91,9 @@ export const Scanner = () => {
   };
 
   const approve = () => {
+    if (!resultImage || !resultStyle) return;
     setDecision("approved");
-    window.dispatchEvent(new CustomEvent("lash:approved", { detail: { style: active.id } }));
+    approveVisualization({ style: resultStyle.id, image: resultImage });
     toast.success("Świetnie! Dobieramy salony pod tę stylizację");
     setTimeout(() => {
       document.getElementById("salons")?.scrollIntoView({ behavior: "smooth" });
@@ -95,12 +103,16 @@ export const Scanner = () => {
   const reject = () => {
     setDecision("rejected");
     setResultImage(null);
+    setResultStyle(null);
+    clearSalonMatches();
     toast("Spróbuj innej stylizacji poniżej", { icon: "✨" });
   };
 
   const reset = () => {
     setSourceImage(null);
     setResultImage(null);
+    setResultStyle(null);
+    clearSalonMatches();
     setDecision("pending");
   };
 
@@ -191,7 +203,7 @@ export const Scanner = () => {
                     </span>
                     <span className="text-[10px] text-primary">AI generated</span>
                   </div>
-                  <div className="font-display text-2xl">{active.name}</div>
+                  <div className="font-display text-2xl">{resultStyle?.name}</div>
                 </div>
               )}
             </div>
@@ -347,9 +359,9 @@ export const Scanner = () => {
                 <div className="text-[10px] tracking-[0.3em] uppercase text-primary">
                   Stylizacja zatwierdzona
                 </div>
-                <div className="font-display text-2xl text-gold">{active.name}</div>
+                <div className="font-display text-2xl text-gold">{resultStyle?.name}</div>
                 <button
-                  onClick={() => setDecision("pending")}
+                  onClick={() => { setDecision("pending"); clearSalonMatches(); }}
                   className="text-[10px] tracking-[0.3em] uppercase text-muted-foreground hover:text-primary transition-luxe"
                 >
                   ← Wróć do wyboru
