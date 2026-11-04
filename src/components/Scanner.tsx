@@ -13,6 +13,15 @@ const engines = [
   { id: "classic", name: "Classic", desc: "Zbalansowany" },
 ];
 
+const curls = ["J", "B", "C", "CC", "D", "L", "M"];
+const thicknesses = ["0.03", "0.05", "0.07", "0.10", "0.15", "0.20"];
+const densities = [
+  { id: "natural", name: "Naturalna" },
+  { id: "medium", name: "Średnia" },
+  { id: "full", name: "Pełna" },
+  { id: "mega", name: "Mega" },
+];
+
 const fileToDataUrl = (file: File): Promise<string> =>
   new Promise((res, rej) => {
     const r = new FileReader();
