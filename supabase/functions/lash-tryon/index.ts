@@ -25,22 +25,77 @@ Return the full original photo with only the lashes edited.`;
 
 const STYLE_PROMPTS: Record<string, string> = {
   classic:
-    "Apply CLASSIC 1:1 eyelash extensions: one 10mm C-curl 0.15 fiber per natural lash, evenly spaced, soft natural density, subtle feminine enhancement. " + REALISM,
+    "Apply CLASSIC 1:1 eyelash extensions: one fiber per natural lash, evenly spaced, soft natural density, subtle feminine enhancement.",
   volume:
-    "Apply MEGA VOLUME Russian eyelash extensions: dense fluffy 5D-8D fans of 0.05 fibers, 13-14mm D-curl, dark black, dramatic wide-open glamorous look, lush but fibers still individually visible. " + REALISM,
+    "Apply MEGA VOLUME Russian eyelash extensions: dense fluffy 5D-8D handmade fans of ultra-fine fibers, dark black, dramatic wide-open glamorous look, lush but fibers still individually visible.",
   cateye:
-    "Apply CAT-EYE wispy eyelash extensions: gradient lengths 9mm inner to 13mm outer corner with CC-curl, elongated lifted winged shape, seductive feline effect, visible wispy spikes at the outer third. " + REALISM,
+    "Apply CAT-EYE wispy eyelash extensions: gradient lengths, shortest in the inner corner growing to longest at the outer corner, elongated lifted winged shape, seductive feline effect, visible wispy spikes at the outer third.",
   doll:
-    "Apply DOLL-LOOK eyelash extensions: rounded center-focused shape, longest 12mm in the middle with D-curl, opens the eye vertically, romantic sweet doll effect. " + REALISM,
-  fox: "Apply FOX-EYE eyelash extensions: sharp horizontal wing, shortest inner corner 8mm growing to dramatic 13-14mm L-curl outer corner, editorial high-fashion elongated eye shape. " + REALISM,
-  wet: "Apply WET-LOOK spiky Kim-K style eyelash extensions: separated glossy 12-14mm M-curl spikes with visible gaps between clusters, trendy Korean anime effect, wet shiny appearance. " + REALISM,
+    "Apply DOLL-LOOK eyelash extensions: rounded center-focused shape, longest fibers in the middle of the eye, opens the eye vertically, romantic sweet doll effect.",
+  fox: "Apply FOX-EYE eyelash extensions: sharp horizontal wing, shortest inner corner growing to a dramatic elongated outer corner, editorial high-fashion elongated eye shape.",
+  wet: "Apply WET-LOOK spiky Kim-K style eyelash extensions: separated glossy spikes with visible gaps between clusters, trendy Korean anime effect, wet shiny appearance.",
 };
+
+const CURL_DESCRIPTIONS: Record<string, string> = {
+  J: "J-curl: almost straight, very subtle lift, most natural look",
+  B: "B-curl: gentle soft curve, natural everyday lift",
+  C: "C-curl: classic medium curl, visible open-eye lift, most popular",
+  CC: "CC-curl: between C and D, stronger glamorous lift",
+  D: "D-curl: dramatic strong curl, maximum lift and eye-opening effect",
+  L: "L-curl: flat base with sharp upward angle, ideal for hooded and droopy eyelids",
+  M: "M-curl: strong upward kick with a modern lifted effect",
+};
+
+const THICKNESS_DESCRIPTIONS: Record<string, string> = {
+  "0.03": "0.03mm ultra-fine fibers, extremely light and feathery",
+  "0.05": "0.05mm very fine fibers, soft fluffy volume fans",
+  "0.07": "0.07mm fine fibers, classic volume fan thickness",
+  "0.10": "0.10mm medium fibers, defined but still soft",
+  "0.15": "0.15mm classic fibers, visible defined single lashes",
+  "0.20": "0.20mm thick bold fibers, strong mascara-like definition",
+};
+
+const DENSITY_DESCRIPTIONS: Record<string, string> = {
+  natural: "natural density: about 60-80 fibers per eye, every natural lash enhanced once",
+  medium: "medium density: 2D-3D fans, clearly fuller but still elegant",
+  full: "full density: 4D-6D fans, rich glamorous volume",
+  mega: "mega density: 7D-10D fans, maximum dramatic black volume",
+};
+
+type Params = {
+  lengthMm?: number;
+  curl?: string;
+  thickness?: string;
+  density?: string;
+};
+
+function buildParamsPrompt(p: Params): string {
+  const parts: string[] = [];
+  if (typeof p.lengthMm === "number" && p.lengthMm >= 6 && p.lengthMm <= 18) {
+    parts.push(`Fiber length: ${p.lengthMm}mm (scaled realistically to the eye size in the photo; use a natural length map — shorter 6-9mm at the inner corner, longest at the designed peak, slightly shorter again at the very outer tip).`);
+  }
+  if (p.curl && CURL_DESCRIPTIONS[p.curl]) {
+    parts.push(`Curl: ${CURL_DESCRIPTIONS[p.curl]}. The curl shape must be clearly visible in side curvature of every fiber.`);
+  }
+  if (p.thickness && THICKNESS_DESCRIPTIONS[p.thickness]) {
+    parts.push(`Fiber thickness: ${THICKNESS_DESCRIPTIONS[p.thickness]}.`);
+  }
+  if (p.density && DENSITY_DESCRIPTIONS[p.density]) {
+    parts.push(`Density: ${DENSITY_DESCRIPTIONS[p.density]}.`);
+  }
+  if (!parts.length) return "";
+  return (
+    "TECHNICAL SPECIFICATION — follow it exactly, this is how a lash stylist would execute this set:\n" +
+    parts.join("\n") +
+    "\nThe result must look like a professional photo of exactly this specification."
+  );
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { imageUrl, style, engine, customDescription } = await req.json();
+    const { imageUrl, style, engine, customDescription, referenceImageUrl, params } = await req.json();
     const ENGINES: Record<string, string> = {
       fast: "google/gemini-3.1-flash-lite-image",
       pro: "google/gemini-3-pro-image",
@@ -55,14 +110,31 @@ serve(async (req) => {
       });
     }
 
-    const prompt =
+    const basePrompt =
       STYLE_PROMPTS[style] ??
       (typeof customDescription === "string" && customDescription.trim()
-        ? `Apply eyelash extensions in this style: ${customDescription.slice(0, 400)}. ` + REALISM
+        ? `Apply eyelash extensions in this style: ${customDescription.slice(0, 400)}.`
         : STYLE_PROMPTS.classic);
+
+    const paramsPrompt = buildParamsPrompt(typeof params === "object" && params ? params : {});
+
+    const hasReference = typeof referenceImageUrl === "string" && referenceImageUrl.startsWith("data:image/");
+    const referencePrompt = hasReference
+      ? "REFERENCE IMAGE: the second image shows the exact lash set to copy (a reference/inspiration photo, e.g. from Pinterest). Reproduce its lash style faithfully on the FIRST image: same curl, length map, density, thickness, direction and overall character of the lashes. Do not copy anything else from the reference — no face, no makeup, no background. Transfer ONLY the lashes."
+      : "";
+
+    const prompt = [basePrompt, paramsPrompt, referencePrompt, REALISM].filter(Boolean).join("\n\n");
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+
+    const content: unknown[] = [
+      { type: "text", text: prompt },
+      { type: "image_url", image_url: { url: imageUrl } },
+    ];
+    if (hasReference) {
+      content.push({ type: "image_url", image_url: { url: referenceImageUrl } });
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -72,15 +144,7 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         model,
-        messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: prompt },
-              { type: "image_url", image_url: { url: imageUrl } },
-            ],
-          },
-        ],
+        messages: [{ role: "user", content }],
         modalities: ["image", "text"],
       }),
     });
