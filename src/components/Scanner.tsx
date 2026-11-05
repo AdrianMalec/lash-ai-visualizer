@@ -90,7 +90,17 @@ export const Scanner = () => {
       toast.error("Najpierw wgraj swoje zdjęcie");
       return;
     }
-    const chosen = styleOverride ?? active;
+    if (mode === "reference" && !referenceImage) {
+      toast.error("Wgraj zdjęcie inspiracji z rzęsami");
+      return;
+    }
+    const chosen: UiStyle =
+      styleOverride ??
+      (mode === "preset"
+        ? active
+        : mode === "reference"
+          ? { id: "reference", name: "Inspiracja ze zdjęcia", img: "", description: "" }
+          : { id: "custom", name: "Własna stylizacja", img: "", description: "" });
     if (!chosen.id) return;
     if (styleOverride) setActive(styleOverride);
     setLoading(true);
@@ -102,11 +112,16 @@ export const Scanner = () => {
       const { data, error } = await supabase.functions.invoke("lash-tryon", {
         body: {
           imageUrl: sourceImage,
-          style: chosen.id,
+          style: mode === "preset" ? chosen.id : undefined,
           engine,
-          customDescription: `${chosen.name}. ${chosen.description}`.slice(0, 400),
-          referenceImageUrl: referenceImage ?? undefined,
-          params: { lengthMm, curl, thickness, density },
+          customDescription:
+            mode === "preset"
+              ? `${chosen.name}. ${chosen.description}`.slice(0, 400)
+              : mode === "reference"
+                ? "Stylizacja rzęs dokładnie według załączonego zdjęcia referencyjnego — skopiuj wyłącznie rzęsy."
+                : `Indywidualna stylizacja rzęs: skręt ${curl}, długość ${lengthMm} mm, włókna ${thickness} mm, gęstość ${density}.`,
+          referenceImageUrl: mode === "reference" ? referenceImage ?? undefined : undefined,
+          params: mode === "custom" ? { lengthMm, curl, thickness, density } : undefined,
         },
       });
       if (error) throw error;
