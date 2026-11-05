@@ -51,8 +51,6 @@ const THICKNESS_DESCRIPTIONS: Record<string, string> = {
   "0.05": "0.05mm very fine fibers, soft fluffy volume fans",
   "0.07": "0.07mm fine fibers, classic volume fan thickness",
   "0.10": "0.10mm medium fibers, defined but still soft",
-  "0.15": "0.15mm classic fibers, visible defined single lashes",
-  "0.20": "0.20mm thick bold fibers, strong mascara-like definition",
 };
 
 const DENSITY_DESCRIPTIONS: Record<string, string> = {
