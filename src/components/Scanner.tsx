@@ -276,6 +276,31 @@ export const Scanner = () => {
 
           {/* Controls */}
           <div className="space-y-10">
+            <div className="grid grid-cols-3 gap-2">
+              {modes.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setMode(m.id)}
+                  disabled={loading}
+                  className={`px-3 py-4 border text-left transition-luxe disabled:opacity-50 ${
+                    mode === m.id
+                      ? "border-primary bg-primary/5 shadow-gold"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <m.icon
+                    size={16}
+                    className={mode === m.id ? "text-primary mb-2" : "text-muted-foreground mb-2"}
+                  />
+                  <div className="font-display text-sm leading-tight">{m.name}</div>
+                  <div className="text-[9px] tracking-[0.15em] uppercase text-muted-foreground mt-1">
+                    {m.desc}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {mode === "preset" && (
             <div>
               <div className="flex items-center gap-3 mb-6">
                 <Sparkles size={14} className="text-primary" />
