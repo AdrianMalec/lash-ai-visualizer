@@ -69,6 +69,15 @@ export const Scanner = () => {
     setDecision("pending");
   };
 
+  const onReferenceUpload = async (file: File) => {
+    if (file.size > 4 * 1024 * 1024) {
+      toast.error("Maksymalny rozmiar inspiracji to 4 MB");
+      return;
+    }
+    setReferenceImage(await fileToDataUrl(file));
+    toast.success("Dodano inspirację — AI skopiuje z niej rzęsy");
+  };
+
   const generate = async (styleOverride?: UiStyle) => {
     if (!sourceImage) {
       toast.error("Najpierw wgraj swoje zdjęcie");
