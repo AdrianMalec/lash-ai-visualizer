@@ -43,6 +43,12 @@ export const Scanner = () => {
   const active: UiStyle = styles.find((s) => s.id === activeId) ?? { id: "", name: "", img: "", description: "" };
   const setActive = (s: UiStyle) => setActiveId(s.id);
   const [engine, setEngine] = useState("pro");
+  const [curl, setCurl] = useState("C");
+  const [lengthMm, setLengthMm] = useState(11);
+  const [thickness, setThickness] = useState("0.07");
+  const [density, setDensity] = useState("medium");
+  const [referenceImage, setReferenceImage] = useState<string | null>(null);
+  const refInputRef = useRef<HTMLInputElement>(null);
   const [sourceImage, setSourceImage] = useState<string | null>(null);
   const [resultImage, setResultImage] = useState<string | null>(null);
   const [resultStyle, setResultStyle] = useState<UiStyle | null>(null);
@@ -83,6 +89,8 @@ export const Scanner = () => {
           style: chosen.id,
           engine,
           customDescription: `${chosen.name}. ${chosen.description}`.slice(0, 400),
+          referenceImageUrl: referenceImage ?? undefined,
+          params: { lengthMm, curl, thickness, density },
         },
       });
       if (error) throw error;
