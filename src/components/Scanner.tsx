@@ -124,7 +124,16 @@ export const Scanner = () => {
           params: mode === "custom" ? { lengthMm, curl, thickness, density } : undefined,
         },
       });
-      if (error) throw error;
+      if (error) {
+        let msg = "Coś poszło nie tak";
+        try {
+          const body = await (error as { context?: Response }).context?.json();
+          if (body?.error) msg = body.error;
+        } catch {
+          /* zostaw domyślny komunikat */
+        }
+        throw new Error(msg);
+      }
       if (data?.error) throw new Error(data.error);
       if (!data?.image) throw new Error("Brak obrazu w odpowiedzi");
       setResultImage(data.image);
