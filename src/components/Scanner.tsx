@@ -481,6 +481,7 @@ export const Scanner = () => {
                 onChange={(e) => e.target.files?.[0] && onReferenceUpload(e.target.files[0])}
               />
             </div>
+            )}
 
             <div>
               <div className="text-xs tracking-[0.3em] text-muted-foreground uppercase mb-4">Silnik AI</div>
