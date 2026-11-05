@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStyles } from "@/lib/data";
-import { Upload, Check, Sparkles, Loader2, RefreshCw, ImagePlus, X } from "lucide-react";
+import { Upload, Check, Sparkles, Loader2, RefreshCw, ImagePlus, X, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { approveVisualization, clearSalonMatches } from "@/lib/salon-matching";
 
@@ -14,7 +14,13 @@ const engines = [
 ];
 
 const curls = ["J", "B", "C", "CC", "D", "L", "M"];
-const thicknesses = ["0.03", "0.05", "0.07", "0.10", "0.15", "0.20"];
+const thicknesses = ["0.03", "0.05", "0.07", "0.10"];
+const modes = [
+  { id: "preset", name: "Gotowe stylizacje", desc: "Propozycje AI", icon: Sparkles },
+  { id: "reference", name: "Zdjęcie inspiracji", desc: "Np. z Pinteresta", icon: ImagePlus },
+  { id: "custom", name: "Własne parametry", desc: "Skręt, długość, efekt", icon: SlidersHorizontal },
+] as const;
+type Mode = (typeof modes)[number]["id"];
 const densities = [
   { id: "natural", name: "Naturalna" },
   { id: "medium", name: "Średnia" },
@@ -43,6 +49,7 @@ export const Scanner = () => {
   const active: UiStyle = styles.find((s) => s.id === activeId) ?? { id: "", name: "", img: "", description: "" };
   const setActive = (s: UiStyle) => setActiveId(s.id);
   const [engine, setEngine] = useState("pro");
+  const [mode, setMode] = useState<Mode>("preset");
   const [curl, setCurl] = useState("C");
   const [lengthMm, setLengthMm] = useState(11);
   const [thickness, setThickness] = useState("0.07");
