@@ -289,6 +289,149 @@ export const Scanner = () => {
             </div>
 
             <div>
+              <div className="text-xs tracking-[0.3em] text-muted-foreground uppercase mb-4">
+                Parametry stylizacji
+              </div>
+              <div className="space-y-5 p-5 border border-border bg-card">
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] tracking-[0.25em] text-muted-foreground uppercase">
+                      Skręt
+                    </span>
+                    <span className="text-[10px] text-primary">{curl}</span>
+                  </div>
+                  <div className="grid grid-cols-7 gap-1">
+                    {curls.map((c) => (
+                      <button
+                        key={c}
+                        onClick={() => setCurl(c)}
+                        disabled={loading}
+                        className={`py-2 text-xs border transition-luxe disabled:opacity-50 ${
+                          curl === c
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] tracking-[0.25em] text-muted-foreground uppercase">
+                      Długość
+                    </span>
+                    <span className="text-[10px] text-primary">{lengthMm} mm</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={6}
+                    max={18}
+                    step={1}
+                    value={lengthMm}
+                    onChange={(e) => setLengthMm(Number(e.target.value))}
+                    disabled={loading}
+                    className="w-full accent-primary"
+                  />
+                  <div className="flex justify-between text-[9px] text-muted-foreground">
+                    <span>6 mm</span>
+                    <span>18 mm</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[10px] tracking-[0.25em] text-muted-foreground uppercase">
+                      Grubość włókna
+                    </span>
+                    <span className="text-[10px] text-primary">{thickness} mm</span>
+                  </div>
+                  <div className="grid grid-cols-6 gap-1">
+                    {thicknesses.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setThickness(t)}
+                        disabled={loading}
+                        className={`py-2 text-[10px] border transition-luxe disabled:opacity-50 ${
+                          thickness === t
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-[10px] tracking-[0.25em] text-muted-foreground uppercase mb-2">
+                    Gęstość
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {densities.map((d) => (
+                      <button
+                        key={d.id}
+                        onClick={() => setDensity(d.id)}
+                        disabled={loading}
+                        className={`py-2 text-[10px] border transition-luxe disabled:opacity-50 ${
+                          density === d.id
+                            ? "border-primary bg-primary/10 text-primary"
+                            : "border-border hover:border-primary/50"
+                        }`}
+                      >
+                        {d.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="text-xs tracking-[0.3em] text-muted-foreground uppercase mb-4">
+                Inspiracja rzęs (np. z Pinteresta)
+              </div>
+              {referenceImage ? (
+                <div className="relative border border-primary/40 overflow-hidden group">
+                  <img
+                    src={referenceImage}
+                    alt="Inspiracja rzęs"
+                    className="w-full h-32 object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 to-transparent" />
+                  <span className="absolute bottom-2 left-3 text-[10px] tracking-[0.25em] uppercase text-primary">
+                    AI skopiuje te rzęsy
+                  </span>
+                  <button
+                    onClick={() => setReferenceImage(null)}
+                    disabled={loading}
+                    className="absolute top-2 right-2 w-7 h-7 bg-background/80 border border-border flex items-center justify-center hover:border-destructive hover:text-destructive transition-luxe"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => refInputRef.current?.click()}
+                  disabled={loading}
+                  className="w-full px-4 py-4 border border-dashed border-primary/40 text-[10px] tracking-[0.25em] uppercase text-muted-foreground flex items-center justify-center gap-2 hover:bg-primary/5 hover:text-primary transition-luxe disabled:opacity-50"
+                >
+                  <ImagePlus size={14} /> Wgraj zdjęcie rzęs jako wzór
+                </button>
+              )}
+              <input
+                ref={refInputRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => e.target.files?.[0] && onReferenceUpload(e.target.files[0])}
+              />
+            </div>
+
+            <div>
               <div className="text-xs tracking-[0.3em] text-muted-foreground uppercase mb-4">Silnik AI</div>
               <div className="grid grid-cols-3 gap-2">
                 {engines.map((en) => (
