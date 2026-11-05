@@ -334,7 +334,9 @@ export const Scanner = () => {
                 ))}
               </div>
             </div>
+            )}
 
+            {mode === "custom" && (
             <div>
               <div className="text-xs tracking-[0.3em] text-muted-foreground uppercase mb-4">
                 Parametry stylizacji
@@ -395,7 +397,7 @@ export const Scanner = () => {
                     </span>
                     <span className="text-[10px] text-primary">{thickness} mm</span>
                   </div>
-                  <div className="grid grid-cols-6 gap-1">
+                  <div className="grid grid-cols-4 gap-1">
                     {thicknesses.map((t) => (
                       <button
                         key={t}
