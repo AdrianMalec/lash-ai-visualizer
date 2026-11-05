@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStyles } from "@/lib/data";
-import { Upload, Check, Sparkles, Loader2, RefreshCw, ImagePlus, X } from "lucide-react";
+import { Upload, Check, Sparkles, Loader2, RefreshCw, ImagePlus, X, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { approveVisualization, clearSalonMatches } from "@/lib/salon-matching";
 
@@ -14,7 +14,13 @@ const engines = [
 ];
 
 const curls = ["J", "B", "C", "CC", "D", "L", "M"];
-const thicknesses = ["0.03", "0.05", "0.07", "0.10", "0.15", "0.20"];
+const thicknesses = ["0.03", "0.05", "0.07", "0.10"];
+const modes = [
+  { id: "preset", name: "Gotowe stylizacje", desc: "Propozycje AI", icon: Sparkles },
+  { id: "reference", name: "Zdjęcie inspiracji", desc: "Np. z Pinteresta", icon: ImagePlus },
+  { id: "custom", name: "Własne parametry", desc: "Skręt, długość, efekt", icon: SlidersHorizontal },
+] as const;
+type Mode = (typeof modes)[number]["id"];
 const densities = [
   { id: "natural", name: "Naturalna" },
   { id: "medium", name: "Średnia" },
@@ -43,6 +49,7 @@ export const Scanner = () => {
   const active: UiStyle = styles.find((s) => s.id === activeId) ?? { id: "", name: "", img: "", description: "" };
   const setActive = (s: UiStyle) => setActiveId(s.id);
   const [engine, setEngine] = useState("pro");
+  const [mode, setMode] = useState<Mode>("preset");
   const [curl, setCurl] = useState("C");
   const [lengthMm, setLengthMm] = useState(11);
   const [thickness, setThickness] = useState("0.07");
@@ -83,7 +90,17 @@ export const Scanner = () => {
       toast.error("Najpierw wgraj swoje zdjęcie");
       return;
     }
-    const chosen = styleOverride ?? active;
+    if (mode === "reference" && !referenceImage) {
+      toast.error("Wgraj zdjęcie inspiracji z rzęsami");
+      return;
+    }
+    const chosen: UiStyle =
+      styleOverride ??
+      (mode === "preset"
+        ? active
+        : mode === "reference"
+          ? { id: "reference", name: "Inspiracja ze zdjęcia", img: "", description: "" }
+          : { id: "custom", name: "Własna stylizacja", img: "", description: "" });
     if (!chosen.id) return;
     if (styleOverride) setActive(styleOverride);
     setLoading(true);
@@ -95,11 +112,16 @@ export const Scanner = () => {
       const { data, error } = await supabase.functions.invoke("lash-tryon", {
         body: {
           imageUrl: sourceImage,
-          style: chosen.id,
+          style: mode === "preset" ? chosen.id : undefined,
           engine,
-          customDescription: `${chosen.name}. ${chosen.description}`.slice(0, 400),
-          referenceImageUrl: referenceImage ?? undefined,
-          params: { lengthMm, curl, thickness, density },
+          customDescription:
+            mode === "preset"
+              ? `${chosen.name}. ${chosen.description}`.slice(0, 400)
+              : mode === "reference"
+                ? "Stylizacja rzęs dokładnie według załączonego zdjęcia referencyjnego — skopiuj wyłącznie rzęsy."
+                : `Indywidualna stylizacja rzęs: skręt ${curl}, długość ${lengthMm} mm, włókna ${thickness} mm, gęstość ${density}.`,
+          referenceImageUrl: mode === "reference" ? referenceImage ?? undefined : undefined,
+          params: mode === "custom" ? { lengthMm, curl, thickness, density } : undefined,
         },
       });
       if (error) throw error;
@@ -254,6 +276,31 @@ export const Scanner = () => {
 
           {/* Controls */}
           <div className="space-y-10">
+            <div className="grid grid-cols-3 gap-2">
+              {modes.map((m) => (
+                <button
+                  key={m.id}
+                  onClick={() => setMode(m.id)}
+                  disabled={loading}
+                  className={`px-3 py-4 border text-left transition-luxe disabled:opacity-50 ${
+                    mode === m.id
+                      ? "border-primary bg-primary/5 shadow-gold"
+                      : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <m.icon
+                    size={16}
+                    className={mode === m.id ? "text-primary mb-2" : "text-muted-foreground mb-2"}
+                  />
+                  <div className="font-display text-sm leading-tight">{m.name}</div>
+                  <div className="text-[9px] tracking-[0.15em] uppercase text-muted-foreground mt-1">
+                    {m.desc}
+                  </div>
+                </button>
+              ))}
+            </div>
+
+            {mode === "preset" && (
             <div>
               <div className="flex items-center gap-3 mb-6">
                 <Sparkles size={14} className="text-primary" />
@@ -287,7 +334,9 @@ export const Scanner = () => {
                 ))}
               </div>
             </div>
+            )}
 
+            {mode === "custom" && (
             <div>
               <div className="text-xs tracking-[0.3em] text-muted-foreground uppercase mb-4">
                 Parametry stylizacji
@@ -348,7 +397,7 @@ export const Scanner = () => {
                     </span>
                     <span className="text-[10px] text-primary">{thickness} mm</span>
                   </div>
-                  <div className="grid grid-cols-6 gap-1">
+                  <div className="grid grid-cols-4 gap-1">
                     {thicknesses.map((t) => (
                       <button
                         key={t}
@@ -389,7 +438,9 @@ export const Scanner = () => {
                 </div>
               </div>
             </div>
+            )}
 
+            {mode === "reference" && (
             <div>
               <div className="text-xs tracking-[0.3em] text-muted-foreground uppercase mb-4">
                 Inspiracja rzęs (np. z Pinteresta)
@@ -430,6 +481,7 @@ export const Scanner = () => {
                 onChange={(e) => e.target.files?.[0] && onReferenceUpload(e.target.files[0])}
               />
             </div>
+            )}
 
             <div>
               <div className="text-xs tracking-[0.3em] text-muted-foreground uppercase mb-4">Silnik AI</div>
