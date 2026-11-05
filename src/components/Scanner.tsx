@@ -438,7 +438,9 @@ export const Scanner = () => {
                 </div>
               </div>
             </div>
+            )}
 
+            {mode === "reference" && (
             <div>
               <div className="text-xs tracking-[0.3em] text-muted-foreground uppercase mb-4">
                 Inspiracja rzęs (np. z Pinteresta)
