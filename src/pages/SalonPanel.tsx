@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, Loader2, Plus, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { BookingHours } from "@/components/BookingHours";
 
 type Salon = { id: string; name: string; city: string; stylist: string; price: string };
 type Photo = { id: string; url: string; style_slug: string | null; custom_style: string; caption: string };
@@ -18,7 +19,7 @@ type Employee = { id: string; name: string; role: string; phone: string; color: 
 type Service = { id: string; name: string; description: string; price: string; duration_min: number };
 type Appt = {
   id: string; employee_id: string | null; client_name: string; client_phone: string;
-  service: string; starts_at: string; duration_min: number; notes: string;
+  service: string; starts_at: string; duration_min: number; notes: string; status: string; client_id: string | null;
 };
 
 const HOURS = Array.from({ length: 13 }, (_, i) => 8 + i); // 8:00–20:00
@@ -61,7 +62,7 @@ export default function SalonPanel() {
           <p className="text-muted-foreground mt-6">
             Twoje konto nie jest jeszcze powiązane z salonem. Panel pojawi się, gdy administrator zaakceptuje rejestrację salonu.
           </p>
-        ) : (
+        ) : uid ? (
           <>
             <p className="text-gold font-display text-2xl mb-8">{salon.name}</p>
             <Tabs defaultValue="calendar">
@@ -71,15 +72,17 @@ export default function SalonPanel() {
                 <TabsTrigger value="portfolio">Portfolio</TabsTrigger>
                 <TabsTrigger value="team">Pracownicy</TabsTrigger>
                 <TabsTrigger value="profile">Profil</TabsTrigger>
+                <TabsTrigger value="hours">Godziny rezerwacji</TabsTrigger>
               </TabsList>
               <TabsContent value="calendar"><CalendarTab salonId={salon.id} /></TabsContent>
               <TabsContent value="services"><ServicesTab salonId={salon.id} /></TabsContent>
-              <TabsContent value="portfolio"><PortfolioTab salonId={salon.id} uid={uid!} /></TabsContent>
-              <TabsContent value="team"><TeamTab salonId={salon.id} uid={uid!} /></TabsContent>
+              <TabsContent value="portfolio"><PortfolioTab salonId={salon.id} uid={uid} /></TabsContent>
+              <TabsContent value="team"><TeamTab salonId={salon.id} uid={uid} /></TabsContent>
               <TabsContent value="profile"><ProfileTab salon={salon} onSaved={setSalon} /></TabsContent>
+              <TabsContent value="hours"><BookingHours salonId={salon.id} /></TabsContent>
             </Tabs>
           </>
-        )}
+        ) : null}
       </div>
     </div>
   );
@@ -320,6 +323,7 @@ function CalendarTab({ salonId }: { salonId: string }) {
   const weekEnd = useMemo(() => { const d = new Date(week); d.setDate(d.getDate() + dayCount); return d; }, [week, dayCount]);
   const load = () =>
     supabase.from("appointments").select("*").eq("salon_id", salonId)
+      .eq("status", "confirmed")
       .gte("starts_at", week.toISOString()).lt("starts_at", weekEnd.toISOString()).order("starts_at")
       .then(({ data }) => setAppts((data ?? []) as Appt[]));
   useEffect(() => { load(); }, [salonId, week, dayCount]);
@@ -354,7 +358,8 @@ function CalendarTab({ salonId }: { salonId: string }) {
   };
   const remove = async () => {
     if (!edit?.id) return;
-    await supabase.from("appointments").delete().eq("id", edit.id);
+    const { error } = await supabase.from("appointments").update({ status: "cancelled" }).eq("id", edit.id);
+    if (error) return toast.error(error.message);
     setEdit(null); load();
   };
 
@@ -448,7 +453,7 @@ function CalendarTab({ salonId }: { salonId: string }) {
               </div>
               <div><Label>Notatki</Label><Textarea value={edit.notes ?? ""} onChange={(e) => setEdit({ ...edit, notes: e.target.value })} /></div>
               <div className="flex gap-2 justify-end">
-                {edit.id && <Button variant="destructive" onClick={remove}><Trash2 /> Usuń</Button>}
+                {edit.id && <Button variant="destructive" onClick={remove}><Trash2 /> Anuluj wizytę</Button>}
                 <Button onClick={save}>Zapisz</Button>
               </div>
             </div>

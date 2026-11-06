@@ -111,7 +111,7 @@ export const Salons = () => {
                   {s.city && <p className="flex items-center gap-2 text-sm text-muted-foreground mt-4"><MapPin size={14} className="text-primary" />{s.city}</p>}
                   <p className="text-sm text-muted-foreground mt-4">{s.reason}</p>
                   {s.price && <p className="font-display text-2xl text-gold mt-4">{s.price}</p>}
-                  <Button variant="outline" className="mt-5 w-fit" onClick={() => setOpened(s)}><Eye /> Zobacz pasujące prace ({s.photos.length})</Button>
+                  <div className="flex flex-wrap gap-3 mt-5"><Button asChild><Link to={`/bookings?salon=${s.id}`}>Umów wizytę</Link></Button><Button variant="outline" onClick={() => setOpened(s)}><Eye /> Zobacz pasujące prace ({s.photos.length})</Button></div>
                 </div>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
