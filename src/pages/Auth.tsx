@@ -11,6 +11,8 @@ const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initial = searchParams.get("mode");
+  const requestedNext = searchParams.get("next") || sessionStorage.getItem("auth-next") || "/";
+  const next = requestedNext.startsWith("/bookings") && !requestedNext.startsWith("//") ? requestedNext : "/";
   const [mode, setMode] = useState<"login" | "signup" | "salon">(
     initial === "signup" ? "signup" : initial === "salon" ? "salon" : "login",
   );
@@ -21,10 +23,10 @@ const Auth = () => {
   const [nipInfo, setNipInfo] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => data.session && navigate("/"));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => s && navigate("/"));
+    supabase.auth.getSession().then(({ data }) => data.session && navigate(next));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => { if (s) { sessionStorage.removeItem("auth-next"); navigate(next); } });
     return () => sub.subscription.unsubscribe();
-  }, [navigate]);
+  }, [navigate, next]);
 
   const checkNip = async () => {
     const { data, error } = await supabase.functions.invoke("verify-nip", { body: { nip: salon.nip } });
@@ -74,6 +76,7 @@ const Auth = () => {
   };
 
   const social = async (provider: "google" | "apple") => {
+    sessionStorage.setItem("auth-next", next);
     const result = await lovable.auth.signInWithOAuth(provider, {
       redirect_uri: window.location.origin,
     });
@@ -82,7 +85,7 @@ const Auth = () => {
       return;
     }
     if (result.redirected) return;
-    navigate("/");
+    navigate(next);
   };
 
   return (

@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       appointments: {
         Row: {
+          client_id: string | null
           client_name: string
           client_phone: string
           created_at: string
@@ -23,11 +24,15 @@ export type Database = {
           employee_id: string | null
           id: string
           notes: string
+          price_snapshot: string
           salon_id: string
           service: string
+          service_id: string | null
           starts_at: string
+          status: string
         }
         Insert: {
+          client_id?: string | null
           client_name: string
           client_phone?: string
           created_at?: string
@@ -35,11 +40,15 @@ export type Database = {
           employee_id?: string | null
           id?: string
           notes?: string
+          price_snapshot?: string
           salon_id: string
           service?: string
+          service_id?: string | null
           starts_at: string
+          status?: string
         }
         Update: {
+          client_id?: string | null
           client_name?: string
           client_phone?: string
           created_at?: string
@@ -47,9 +56,12 @@ export type Database = {
           employee_id?: string | null
           id?: string
           notes?: string
+          price_snapshot?: string
           salon_id?: string
           service?: string
+          service_id?: string | null
           starts_at?: string
+          status?: string
         }
         Relationships: [
           {
@@ -64,6 +76,13 @@ export type Database = {
             columns: ["salon_id"]
             isOneToOne: false
             referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "appointments_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "salon_services"
             referencedColumns: ["id"]
           },
         ]
@@ -133,6 +152,38 @@ export type Database = {
           status?: string
         }
         Relationships: []
+      }
+      salon_booking_hours: {
+        Row: {
+          closes_min: number
+          enabled: boolean
+          opens_min: number
+          salon_id: string
+          weekday: number
+        }
+        Insert: {
+          closes_min?: number
+          enabled?: boolean
+          opens_min?: number
+          salon_id: string
+          weekday: number
+        }
+        Update: {
+          closes_min?: number
+          enabled?: boolean
+          opens_min?: number
+          salon_id?: string
+          weekday?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "salon_booking_hours_salon_id_fkey"
+            columns: ["salon_id"]
+            isOneToOne: false
+            referencedRelation: "salons"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       salon_employees: {
         Row: {
@@ -316,12 +367,67 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      book_appointment: {
+        Args: {
+          p_appointment?: string
+          p_employee: string
+          p_name: string
+          p_notes?: string
+          p_phone: string
+          p_salon: string
+          p_service: string
+          p_start: string
+        }
+        Returns: string
+      }
+      booking_salons: {
+        Args: never
+        Returns: {
+          city: string
+          id: string
+          image_url: string
+          name: string
+          stylist: string
+        }[]
+      }
+      booking_slots: {
+        Args: {
+          p_day: string
+          p_employee: string
+          p_exclude?: string
+          p_salon: string
+          p_service: string
+        }
+        Returns: {
+          starts_at: string
+        }[]
+      }
+      cancel_my_appointment: { Args: { p_id: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      my_appointments: {
+        Args: never
+        Returns: {
+          city: string
+          client_name: string
+          client_phone: string
+          duration_min: number
+          employee_id: string
+          employee_name: string
+          id: string
+          price: string
+          salon_id: string
+          salon_name: string
+          service: string
+          service_id: string
+          starts_at: string
+          status: string
+        }[]
       }
       owns_salon: { Args: { _salon_id: string }; Returns: boolean }
     }

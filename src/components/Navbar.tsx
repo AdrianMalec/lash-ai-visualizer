@@ -48,7 +48,7 @@ export const Navbar = () => {
           <span className="text-[10px] tracking-[0.4em] text-muted-foreground uppercase">studio</span>
         </button>
 
-        <div className="hidden md:flex items-center gap-10">
+        <div className="hidden xl:flex items-center gap-5">
           {links.map((l) => (
             <button
               key={l.id}
@@ -58,6 +58,8 @@ export const Navbar = () => {
               {l.label}
             </button>
           ))}
+          <Button asChild variant="outline" size="sm"><Link to="/bookings">Umów wizytę</Link></Button>
+          {email && <Button asChild variant="ghost" size="sm"><Link to="/bookings?view=mine">Moje wizyty</Link></Button>}
           {isSalon && (
             <Link to="/salon" className="text-sm tracking-wide text-primary hover:text-gold transition-luxe">
               Mój salon
@@ -90,13 +92,13 @@ export const Navbar = () => {
           </button>
         </div>
 
-        <Button variant="ghost" size="icon" className="md:hidden text-foreground" onClick={() => setOpen(!open)} aria-label={open ? "Zamknij menu" : "Otwórz menu"} aria-expanded={open}>
+        <div className="flex gap-2 xl:hidden"><Button asChild variant="outline" size="sm"><Link to="/bookings">Umów wizytę</Link></Button><Button variant="ghost" size="icon" className="text-foreground" onClick={() => setOpen(!open)} aria-label={open ? "Zamknij menu" : "Otwórz menu"} aria-expanded={open}>
           {open ? <X size={22} /> : <Menu size={22} />}
-        </Button>
+        </Button></div>
       </nav>
 
       {open && (
-        <div className="md:hidden bg-background/95 backdrop-blur-xl border-t border-border">
+        <div className="xl:hidden bg-background/95 backdrop-blur-xl border-t border-border">
           <div className="container py-6 flex flex-col gap-4">
             {links.map((l) => (
               <button
@@ -108,6 +110,7 @@ export const Navbar = () => {
               </button>
             ))}
             <div className="border-t border-border pt-4 flex flex-col gap-3">
+              <Button asChild variant="outline"><Link to="/bookings?view=mine" onClick={() => setOpen(false)}>Moje wizyty</Link></Button>
               {isSalon && <Button asChild variant="outline"><Link to="/salon" onClick={() => setOpen(false)}>Mój salon</Link></Button>}
               {isAdmin && <Button asChild variant="outline"><Link to="/admin" onClick={() => setOpen(false)}>Admin</Link></Button>}
               {email ? (

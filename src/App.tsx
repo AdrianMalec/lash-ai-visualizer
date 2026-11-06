@@ -9,6 +9,7 @@ import Auth from "./pages/Auth.tsx";
 import Admin from "./pages/Admin.tsx";
 import SalonPanel from "./pages/SalonPanel.tsx";
 import ResetPassword from "./pages/ResetPassword.tsx";
+import Bookings from "./pages/Bookings";
 import { ApprovalGuard } from "./components/ApprovalGuard";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/auth" element={<Auth />} />
           <Route path="/admin" element={<Admin />} />
           <Route path="/salon" element={<SalonPanel />} />
+          <Route path="/bookings" element={<Bookings />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
