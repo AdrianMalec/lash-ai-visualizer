@@ -89,17 +89,131 @@ function buildParamsPrompt(p: Params): string {
   );
 }
 
+// Google AI Studio models (free tier) mapped from the app engines.
+const GOOGLE_MODELS: Record<string, string> = {
+  fast: "gemini-2.5-flash-image",
+  classic: "gemini-2.5-flash-image",
+  pro: "gemini-3-pro-image",
+};
+
+// Lovable AI Gateway models (fallback when no own Google key is configured).
+const LOVABLE_MODELS: Record<string, string> = {
+  fast: "google/gemini-3.1-flash-lite-image",
+  pro: "google/gemini-3-pro-image",
+  classic: "google/gemini-2.5-flash-image",
+};
+
+function dataUrlToInlineData(url: string): { mimeType: string; data: string } | null {
+  const match = /^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/s.exec(url);
+  if (!match) return null;
+  return { mimeType: match[1], data: match[2] };
+}
+
+async function generateWithGoogle(
+  apiKey: string,
+  engine: string,
+  prompt: string,
+  imageUrl: string,
+  referenceImageUrl?: string,
+): Promise<{ image?: string; status?: number; error?: string }> {
+  const model = GOOGLE_MODELS[engine] ?? GOOGLE_MODELS.classic;
+  const parts: unknown[] = [{ text: prompt }];
+  const main = dataUrlToInlineData(imageUrl);
+  if (main) parts.push({ inlineData: main });
+  if (referenceImageUrl) {
+    const ref = dataUrlToInlineData(referenceImageUrl);
+    if (ref) parts.push({ inlineData: ref });
+  }
+
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts }],
+        generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
+      }),
+    },
+  );
+
+  if (response.status === 429) {
+    return { status: 429, error: "Darmowy limit Google AI na dziś został wyczerpany. Spróbuj ponownie jutro lub zmień silnik." };
+  }
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("Google AI error:", response.status, errText.slice(0, 500));
+    return { status: 500, error: "Błąd Google AI" };
+  }
+
+  const data = await response.json();
+  const outParts = data?.candidates?.[0]?.content?.parts ?? [];
+  for (const part of outParts) {
+    const inline = part?.inlineData ?? part?.inline_data;
+    if (inline?.data) {
+      const mime = inline.mimeType ?? inline.mime_type ?? "image/png";
+      return { image: `data:${mime};base64,${inline.data}` };
+    }
+  }
+  console.error("Google AI returned no image:", JSON.stringify(data).slice(0, 500));
+  return { status: 500, error: "AI nie zwróciło obrazu" };
+}
+
+async function generateWithLovable(
+  apiKey: string,
+  engine: string,
+  prompt: string,
+  imageUrl: string,
+  referenceImageUrl?: string,
+): Promise<{ image?: string; status?: number; error?: string }> {
+  const model = LOVABLE_MODELS[engine] ?? LOVABLE_MODELS.classic;
+  const content: unknown[] = [
+    { type: "text", text: prompt },
+    { type: "image_url", image_url: { url: imageUrl } },
+  ];
+  if (referenceImageUrl) {
+    content.push({ type: "image_url", image_url: { url: referenceImageUrl } });
+  }
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "user", content }],
+      modalities: ["image", "text"],
+    }),
+  });
+
+  if (response.status === 429) {
+    return { status: 429, error: "Zbyt wiele żądań. Spróbuj ponownie za chwilę." };
+  }
+  if (response.status === 402) {
+    return { status: 402, error: "Wymagane uzupełnienie kredytów Lovable AI." };
+  }
+  if (!response.ok) {
+    const errText = await response.text();
+    console.error("AI gateway error:", response.status, errText);
+    return { status: 500, error: "AI gateway error" };
+  }
+
+  const data = await response.json();
+  const generated = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
+  if (!generated) {
+    console.error("No image returned:", JSON.stringify(data).slice(0, 500));
+    return { status: 500, error: "AI nie zwróciło obrazu" };
+  }
+  return { image: generated };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
     const { imageUrl, style, engine, customDescription, referenceImageUrl, params } = await req.json();
-    const ENGINES: Record<string, string> = {
-      fast: "google/gemini-3.1-flash-lite-image",
-      pro: "google/gemini-3-pro-image",
-      classic: "google/gemini-2.5-flash-image",
-    };
-    const model = ENGINES[engine] ?? ENGINES.classic;
 
     if (!imageUrl || typeof imageUrl !== "string") {
       return new Response(JSON.stringify({ error: "imageUrl is required" }), {
@@ -123,63 +237,30 @@ serve(async (req) => {
 
     const prompt = [basePrompt, paramsPrompt, referencePrompt, REALISM].filter(Boolean).join("\n\n");
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY not configured");
+    // Prefer the owner's free Google AI Studio key; fall back to Lovable AI Gateway.
+    const googleKey = Deno.env.get("GEMINI_API_KEY");
+    const lovableKey = Deno.env.get("LOVABLE_API_KEY");
 
-    const content: unknown[] = [
-      { type: "text", text: prompt },
-      { type: "image_url", image_url: { url: imageUrl } },
-    ];
-    if (hasReference) {
-      content.push({ type: "image_url", image_url: { url: referenceImageUrl } });
-    }
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        messages: [{ role: "user", content }],
-        modalities: ["image", "text"],
-      }),
-    });
-
-    if (response.status === 429) {
-      return new Response(
-        JSON.stringify({ error: "Zbyt wiele żądań. Spróbuj ponownie za chwilę." }),
-        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    if (response.status === 402) {
-      return new Response(
-        JSON.stringify({ error: "Wymagane uzupełnienie kredytów Lovable AI." }),
-        { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-    if (!response.ok) {
-      const errText = await response.text();
-      console.error("AI gateway error:", response.status, errText);
-      return new Response(JSON.stringify({ error: "AI gateway error" }), {
+    let result: { image?: string; status?: number; error?: string };
+    if (googleKey) {
+      result = await generateWithGoogle(googleKey, engine, prompt, imageUrl, hasReference ? referenceImageUrl : undefined);
+    } else if (lovableKey) {
+      result = await generateWithLovable(lovableKey, engine, prompt, imageUrl, hasReference ? referenceImageUrl : undefined);
+    } else {
+      return new Response(JSON.stringify({ error: "Brak skonfigurowanego klucza AI" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const data = await response.json();
-    const generated = data?.choices?.[0]?.message?.images?.[0]?.image_url?.url;
-
-    if (!generated) {
-      console.error("No image returned:", JSON.stringify(data).slice(0, 500));
-      return new Response(JSON.stringify({ error: "AI nie zwróciło obrazu" }), {
-        status: 500,
+    if (!result.image) {
+      return new Response(JSON.stringify({ error: result.error ?? "AI nie zwróciło obrazu" }), {
+        status: result.status ?? 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ image: generated }), {
+    return new Response(JSON.stringify({ image: result.image }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
