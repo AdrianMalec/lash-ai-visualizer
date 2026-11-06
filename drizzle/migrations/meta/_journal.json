@@ -29,6 +29,13 @@
       "when": 1793699311275,
       "tag": "0003_salon_services_and_employee_photos",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1793953177950,
+      "tag": "0004_client_booking",
+      "breakpoints": true
     }
   ]
 }
