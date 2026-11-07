@@ -98,9 +98,9 @@ const GOOGLE_MODELS: Record<string, string> = {
 
 // Lovable AI Gateway models (fallback when no own Google key is configured).
 const LOVABLE_MODELS: Record<string, string> = {
-  fast: "google/gemini-2.5-flash-image",
+  fast: "google/gemini-3.1-flash-image",
   pro: "google/gemini-3-pro-image",
-  classic: "google/gemini-2.5-flash-image",
+  classic: "google/gemini-3.1-flash-image",
 };
 
 function dataUrlToInlineData(url: string): { mimeType: string; data: string } | null {
