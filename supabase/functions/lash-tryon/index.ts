@@ -98,9 +98,9 @@ const GOOGLE_MODELS: Record<string, string> = {
 
 // Lovable AI Gateway models (fallback when no own Google key is configured).
 const LOVABLE_MODELS: Record<string, string> = {
-  fast: "google/gemini-3.1-flash-lite-image",
+  fast: "google/gemini-3-pro-image",
   pro: "google/gemini-3-pro-image",
-  classic: "google/gemini-2.5-flash-image",
+  classic: "google/gemini-3-pro-image",
 };
 
 function dataUrlToInlineData(url: string): { mimeType: string; data: string } | null {
@@ -244,6 +244,11 @@ serve(async (req) => {
     let result: { image?: string; status?: number; error?: string };
     if (googleKey) {
       result = await generateWithGoogle(googleKey, engine, prompt, imageUrl, hasReference ? referenceImageUrl : undefined);
+      // Free Google quota exhausted or temporary failure — try the Lovable gateway as backup.
+      if (!result.image && lovableKey) {
+        console.error("Google path failed, falling back to Lovable gateway:", result.status, result.error);
+        result = await generateWithLovable(lovableKey, engine, prompt, imageUrl, hasReference ? referenceImageUrl : undefined);
+      }
     } else if (lovableKey) {
       result = await generateWithLovable(lovableKey, engine, prompt, imageUrl, hasReference ? referenceImageUrl : undefined);
     } else {
