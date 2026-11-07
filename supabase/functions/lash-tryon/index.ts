@@ -244,6 +244,11 @@ serve(async (req) => {
     let result: { image?: string; status?: number; error?: string };
     if (googleKey) {
       result = await generateWithGoogle(googleKey, engine, prompt, imageUrl, hasReference ? referenceImageUrl : undefined);
+      // Free Google quota exhausted or temporary failure — try the Lovable gateway as backup.
+      if (!result.image && lovableKey) {
+        console.error("Google path failed, falling back to Lovable gateway:", result.status, result.error);
+        result = await generateWithLovable(lovableKey, engine, prompt, imageUrl, hasReference ? referenceImageUrl : undefined);
+      }
     } else if (lovableKey) {
       result = await generateWithLovable(lovableKey, engine, prompt, imageUrl, hasReference ? referenceImageUrl : undefined);
     } else {
